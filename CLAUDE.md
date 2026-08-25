@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`@tcl/jsobject` is a TypeScript JSON object model framework. It provides `JSObject`, a base class that wraps raw JSON data (`JSData`) and exposes typed get/set property accessors. All entity classes in consuming projects (e.g., `bcx-core-node`) extend `JSObject`.
+`@tcl/jsobject` is a TypeScript JSON object model framework. It provides `JSObject`, a base class that wraps raw JSON data (`JSData`) and exposes typed get/set property accessors. All entity classes in consuming projects extend `JSObject`.
 
 ## Commands
 
@@ -16,7 +16,14 @@ npm run build
 npm install
 ```
 
-There is no test runner configured in this package. Tests for JSObject and JSError exist as `.test.js` files in `src/model/` but are run from the consuming `bcx-core-node` project using Jest with ts-jest.
+Tests are run locally using Jest with ts-jest:
+
+```bash
+# Run tests
+npm test
+```
+
+Test files live alongside source as `.test.js` files in `src/model/`.
 
 ## Architecture
 
