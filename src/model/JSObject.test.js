@@ -4,7 +4,7 @@ import JSObject from './JSObject';
 
 class Sub1 extends JSObject {
   constructor() {
-    super({ classObj: Sub1 });
+    super(undefined, Sub1);
   }
 
   static GetClass() {
