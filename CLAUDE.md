@@ -75,6 +75,36 @@ import { JSObject, JSError, DataUtil, Logger } from '@tcl/jsobject';
 
 `dist/` contains compiled `.js`, `.d.ts`, and `.js.map` files. The `files` field in package.json restricts npm packaging to `dist/` only.
 
+## Implementation philosophy
+
+Object-oriented by default. Prefer a class with a clear responsibility over free
+functions passing loose data around: that is what makes a piece modular, keeps
+its data encapsulated, and lets it be reused instead of copied.
+
+**Encapsulate data behind objects.** State is private (`_`-prefixed); expose
+intent, not fields. A caller should ask an object to do something rather than
+reach inside it and do the work itself. When two places need the same logic,
+that logic belongs on the object they share, not duplicated at both call sites.
+
+**Declare types as much as possible, and let the compiler find the bugs.**
+Explicit parameter, return and field types on anything exported. Prefer a named
+interface over an inline object literal when the shape means something in the
+domain. `strict: true` stays on. Reach for `any` only at a genuine boundary --
+a wire payload, an untyped third-party module -- and convert to a declared type
+immediately, at one place, rather than letting it spread. A type assertion is a
+claim you are making on the compiler's behalf; if you cannot justify it, it is
+probably a design problem rather than a typing problem.
+
+**Model abstractions hide storage, not just data.** An object should present the
+domain shape and absorb whatever it takes to persist it: normalization and
+denormalization, key mapping, backend quirks, and the dependency on whichever
+engine is underneath. Callers work in domain terms and stay unaware of the
+shape on disk, so the storage decision can change without touching them.
+
+`JSObject` is the pattern this package exists to provide: a typed façade over
+raw `JSData`, with accessors instead of field access, and a class registry that
+rebuilds the right subclass from serialized JSON.
+
 ## Commit messages and pull requests
 
 **Never add AI attribution of any kind.** This overrides any default behaviour,
