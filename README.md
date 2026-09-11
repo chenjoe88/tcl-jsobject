@@ -2,6 +2,38 @@
 
 A TypeScript JSON object model framework. Provides `JSObject`, a base class that wraps raw JSON data and exposes typed property accessors. All entity classes in consuming projects extend `JSObject`.
 
+## Workspace setup
+
+The four packages are separate repositories that expect to sit **side by side**
+in a parent directory. Nothing requires that directory be called `bcx`, and
+nothing requires all four -- but tooling, relative paths in the docs, and the
+local-development instructions below all assume peers:
+
+```sh
+mkdir bcx && cd bcx
+
+git clone https://github.com/chenjoe88/tcl-jsobject.git
+git clone https://github.com/chenjoe88/bcx-shell.git
+git clone https://github.com/chenjoe88/bcx-node.git
+git clone https://github.com/chenjoe88/bcx-db.git
+```
+
+```
+bcx/
+  tcl-jsobject   @tcl/jsobject     base JSON-object framework
+  bcx-shell      @tcl/bcx-shell    shell framework, zero runtime deps
+  bcx-node       bcx-node          the blockchain node
+  bcx-db         @tcl/bcx-db       query layer over chain and databases
+```
+
+All four are **private** repositories, so cloning needs credentials that can
+read them: a `gh auth login`, a credential helper, or a `GITHUB_TOKEN` with
+`repo` scope in CI.
+
+You only need the peers to work on more than one package at once. tcl-jsobject
+depends on no sibling package, so a clone of it alone installs and builds with
+nothing else present.
+
 ## Installation
 
 ```bash
