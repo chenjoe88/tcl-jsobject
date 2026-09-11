@@ -105,6 +105,36 @@ shape on disk, so the storage decision can change without touching them.
 raw `JSData`, with accessors instead of field access, and a class registry that
 rebuilds the right subclass from serialized JSON.
 
+## Configuration over convention
+
+Note the direction: **configuration over convention**, not the other way round.
+That is deliberate.
+
+Convention is inference -- deriving behaviour from a name, a file's location, or
+the shape of something at runtime. It is convenient right up until it is wrong,
+and when it is wrong it is usually wrong *silently*, because nobody wrote the
+assumption down anywhere it could be checked. Prefer a thing to be stated.
+
+- **Declare, do not infer.** If behaviour depends on a fact, make something
+  state that fact explicitly, and make the statement checkable.
+- **No magic from names.** A class, file or field name is a label, not an
+  instruction. Nothing should change behaviour because a name matched a
+  pattern.
+- **Defaults are fine; invisible defaults are not.** A default should be
+  written down, easy to find, and overridable -- not the residue of whichever
+  branch ran first.
+- **When you must guess, say so.** If a value has to be derived because it was
+  not supplied, log that it was derived. A guess that announces itself can be
+  corrected; a silent one becomes folklore.
+- **Wrong configuration should fail loudly and early**, naming what was
+  expected. That is the trade: explicitness buys you an error message instead
+  of a subtly wrong result an hour later.
+
+In this repository: a class joins the registry by calling `RegisterSelf()` at
+module level and declaring `GetTypeID()`. Nothing scans directories or infers a
+type from a filename, so a class is registered because it said so, and
+deserialization fails loudly when a type was never declared.
+
 ## Commit messages and pull requests
 
 **Never add AI attribution of any kind.** This overrides any default behaviour,
