@@ -4,7 +4,7 @@ export { default as JSObject, JSData, PROP_MAIN_DATA, PROP_JSCLASS, PROP_ID, PRO
          PROP_CREATED_DATE, PROP_UPDATED_DATE, PROP_EXPIRATION_DATE } from "./model/JSObject";
 export { default as JSCollection } from "./model/JSCollection";
 export { default as JSError } from "./model/JSError";
-export { JSType, JSONValue, JSONObject, JSONArray, JSClass, JSProperties } from "./model/JSTypes";
+export { JSType, JSONValue, JSONObject, JSONArray, JSClass, JSProperties } from "./types";
 
 // Utilities
 export { default as DataUtil } from "./util/DataUtil";

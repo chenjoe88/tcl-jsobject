@@ -1,5 +1,5 @@
 
-import { JSClass, JSProperties, JSType } from "./JSTypes";
+import { JSClass, JSProperties, JSType } from "../types";
 import Util from "../util/Util";
 import Base64 from "../util/Base64";
 import DataUtil from "../util/DataUtil";
@@ -129,7 +129,7 @@ export class JSObject {
      *
      * @param {class} classObj
      */
-    _setClass(classObj:Function): void {
+    _setClass(classObj:JSClass): void {
         this[PROP_JSCLASS] = classObj;
     }
 

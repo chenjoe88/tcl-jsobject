@@ -1,5 +1,5 @@
 import Logger from "../system/Logger";
-import { JSClass, JSType } from "../model/JSTypes";
+import { JSClass, JSType } from "../types";
 
 const _CLSNAME_ = 'MetaUtil';
 const _logger = Logger.Get(_CLSNAME_);

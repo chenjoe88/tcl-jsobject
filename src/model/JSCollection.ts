@@ -2,7 +2,7 @@
 
 import DataUtil from '../util/DataUtil';
 import JSObject, { JSData } from './JSObject';
-import { JSClass } from './JSTypes';
+import { JSClass } from '../types';
 
 
 const _CLSNAME = 'JSCollection'; // match class name
