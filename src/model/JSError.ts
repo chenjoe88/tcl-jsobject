@@ -7,10 +7,18 @@ const PROP_ARGS = 'args';
 // const _CLSNAME_ = 'JSError';
 
 /**
- * This class represents errors within the package
+ * This class represents errors within the package.
  *
+ * It extends `Error`, so a JSError can be thrown and caught like any other:
+ * `instanceof Error` holds, it carries a stack, and the tooling that
+ * special-cases errors works on it. Before that it was a plain object, which
+ * looked like an error and failed every test for being one -- notably
+ * `expect(...).toThrow()` reporting "did not throw" for a call that plainly had.
+ *
+ * The code is the identity; the message is prose for a human. Compare with
+ * `equals`, never by message text.
  */
-export class JSError {
+export class JSError extends Error {
     [PROP_ECODE]: string;
     [PROP_MSG]: string;
     [PROP_ARGS]: string;
@@ -22,14 +30,29 @@ export class JSError {
      * @param  args
      */
     constructor(code:string, msg:string, ...args:any) {
-        // super(undefined, JSError);
-        // this.set(PROP_ECODE, code);
-        // this.set(PROP_MSG, msg);
-        // this.set(PROP_ARGS, JSON.stringify(args));
+        super(msg);
 
+        this.name = 'JSError';
         this[PROP_ECODE] = code;
+        /*
+         * The raw message is kept alongside `Error.message`, which stringifies
+         * whatever it is given. Callers that passed null relied on getMessage()
+         * returning null, and toString() still branches on it.
+         */
         this[PROP_MSG] = msg;
         this[PROP_ARGS] = JSON.stringify(args);
+
+        /*
+         * Extending a built-in loses the prototype when compiled down to ES5,
+         * which silently breaks `instanceof`. Harmless at the current ES6
+         * target, and what stops this regressing if the target ever changes.
+         */
+        Object.setPrototypeOf(this, new.target.prototype);
+
+        // Start the stack at the throw site, not inside this constructor.
+        if (typeof (Error as any).captureStackTrace === 'function') {
+            (Error as any).captureStackTrace(this, new.target);
+        }
     }
 
     get CODE() { return this[PROP_ECODE]; }
