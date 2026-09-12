@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 import Logger from "../system/Logger";
 
@@ -22,7 +21,7 @@ class DataUtil {
      *
      * @see ~NotNull
      */
-    static IsNull(value) {
+    static IsNull(value: unknown): boolean {
         return (value === null) || (value === undefined);
     }
 
@@ -34,7 +33,7 @@ class DataUtil {
      *
      * @see ~IsNull
      */
-    static NotNull(value) {
+    static NotNull(value: unknown): boolean {
         return (value !== null) && (value !== undefined);
     }
 
@@ -45,7 +44,7 @@ class DataUtil {
      * @param {*} type
      * @returns {boolean} true for now (no support)
      */
-    static IsInstance(data, type) {
+    static IsInstance(data: unknown, type: unknown): boolean {
         // NOT SUPPORTED IN GENERIC NODE (no Babel)
         // return data instanceof type;
         return true;
@@ -62,7 +61,7 @@ class DataUtil {
      * @param {string} msg message
      * @param  {...any} args
      */
-    static Assert(expr, classname, method, msg, ...args) {
+    static Assert(expr: boolean, classname?: string, method?: string, msg?: string, ...args: any[]): boolean {
         if (expr === true) {
             return true;
         }
@@ -77,7 +76,7 @@ class DataUtil {
      * @param {Exception} exceptionObj
      * @return {boolean} return false if exception object is not provided
      */
-    static AssertType(data, dataType, errorCode = null) {
+    static AssertType(data: unknown, dataType: unknown, errorCode: (string | null) = null): boolean {
         const verdict = DataUtil.IsInstance(data, dataType);
 
         if (verdict === true) {
@@ -102,11 +101,11 @@ class DataUtil {
      * @param {string} msg text message
      * @param  {...any} args
      */
-    static AssertNotNull(expr, method, msg, ...args) {
+    static AssertNotNull(expr: unknown, method?: string, msg?: string, ...args: any[]): boolean {
         if (DataUtil.NotNull(expr)) {
             return true;
         }
-        _logger.debug(method, msg, ...args);
+        _logger.debug(method || '', msg, ...args);
         return false;
     }
 
@@ -120,7 +119,7 @@ class DataUtil {
      * @param {string} msg text message
      * @param  {...any} args
      */
-    static AssertArrayNoNulls(values, classname, method, msg, ...args) {
+    static AssertArrayNoNulls(values: (unknown[] | null), classname?: string, method?: string, msg?: string, ...args: any[]): boolean {
         if (values == null) {
             return false;
         }
@@ -145,7 +144,7 @@ class DataUtil {
      * @param {string} msg text message
      * @param  {...any} args
      */
-    static AssertInstanceOf(object, classObj, classname, method, msg, ...args) {
+    static AssertInstanceOf(object: unknown, classObj: Function, classname?: string, method?: string, msg?: string, ...args: any[]): boolean {
         if (object == null) {
             return false;
         }
@@ -165,7 +164,7 @@ class DataUtil {
      * @param {boolean} trim true to trim first before checking for length
      * @return {number} 0 means empty or null
      */
-    static StringLength(s, trim = false) {
+    static StringLength(s?: (string | null), trim: boolean = false): number {
         if (s == null) {
             return 0;
         }
@@ -180,7 +179,7 @@ class DataUtil {
      * @param {boolean} trim true to trim first before checking for length
      * @return {boolean} true if string is empty or null
      */
-    static StringIsEmpty(s, trim = false, nullIsEmpty = true) {
+    static StringIsEmpty(s?: (string | null), trim: boolean = false, nullIsEmpty: boolean = true): boolean {
         if (s == null && (nullIsEmpty === false)) {
             return false;
         }
@@ -192,7 +191,7 @@ class DataUtil {
      * @param {*} s
      * @return {boolean} true if string type
      */
-    static IsString(s) {
+    static IsString(s: unknown): boolean {
         return typeof s === 'string';
     }
 
@@ -205,7 +204,7 @@ class DataUtil {
      * @param {boolean=} trim
      * @return {boolean}
      */
-    static StringEquals(s1, s2, ignoreCase = true, nullIsEmpty = false, trim = false) {
+    static StringEquals(s1: any, s2: any, ignoreCase: boolean = true, nullIsEmpty: boolean = false, trim: boolean = false): boolean {
         if (trim === true) {
             s1 = (DataUtil.NotNull(s1)) ? String(s1).trim() : null;
             s2 = (DataUtil.NotNull(s2)) ? String(s2).trim() : null;
@@ -231,7 +230,7 @@ class DataUtil {
      * @param {string[]} list1
      * @param {string[]} list2
      */
-    static MergeStrings(list1, list2) {
+    static MergeStrings(list1: (string[] | null), list2: (string[] | null)): (string[] | null) {
         if (list2 == null) {
             return list1;
         }
@@ -250,7 +249,7 @@ class DataUtil {
      * @param {*} ch character to pad. default to space
      * @param {*} length pad if shorter than this length
      */
-    static StringPadStart(s, ch = ' ', length = null) {
+    static StringPadStart(s: any, ch: string = ' ', length: (number | null) = null): any {
         if (length == null) {
             return s; // bad input
         }
@@ -268,7 +267,7 @@ class DataUtil {
      * @param {string} ch character(s) to insert
      * @param {number} gap size of gap in character
      */
-    static StringInsertDelim(s, ch, gap) {
+    static StringInsertDelim(s: string, ch: string, gap: number): string {
         // not working
         const regex = new RegExp(`/.{1,${gap}/g`);
         const tokens = s.match(regex);
@@ -285,7 +284,7 @@ class DataUtil {
      * @param {boolean} defaultVal if value given is null/undefined
      * @return {boolean} boolean true or false
      */
-    static toBoolean(value, defaultVal = false) {
+    static toBoolean(value: unknown, defaultVal: boolean = false): boolean {
         if (value == null) {
             return defaultVal;
         }
@@ -327,7 +326,7 @@ class DataUtil {
      * @param {*} value
      * @return {null} null or original value
      */
-    static toNull(value) {
+    static toNull(value: any): any {
         if (DataUtil.IsNull(value) || String(value).toLowerCase() === 'null') {
             return null;
         } else if (typeof (value) !== 'string') {
@@ -344,7 +343,7 @@ class DataUtil {
      * @param {number=} defaultVal if value given is null or error
      * @return {number} numeric value or defaultVal
      */
-    static toNumber(value, defaultVal = null) {
+    static toNumber(value: any, defaultVal: (number | null) = null): (number | null) {
         const _m = 'toNumber';
         if ((value === null) || (value === undefined)) {
             return defaultVal;
@@ -368,17 +367,17 @@ class DataUtil {
         }
     } // toNumber
 
-    static toNumberWithRange(value, min, max, defaultVal = null) {
-        value = this.toNumber(value, defaultVal);
-        min = this.toNumber(min) || -Infinity;
-        max = this.toNumber(max) || Infinity;
+    static toNumberWithRange(value: any, min: any, max: any, defaultVal: (number | null) = null): (number | null) {
+        let result = this.toNumber(value, defaultVal);
+        const lower = this.toNumber(min) || -Infinity;
+        const upper = this.toNumber(max) || Infinity;
 
-        if (value) {
-            value = Math.max(value, min);
-            value = Math.min(value, max);
+        if (result) {
+            result = Math.max(result, lower);
+            result = Math.min(result, upper);
         }
 
-        return value;
+        return result;
     } // toNumber
 
     /**
@@ -391,10 +390,11 @@ class DataUtil {
      * @param {*} v2
      * @returns {boolean} true if numeric representation is the same
      */
-    static NumberEquals(v1, v2) {
-        const n1 = DataUtil.toNumber(v1, 'b1');
-        const n2 = DataUtil.toNumber(v2, 'b2');
-        return n1 === n2;
+    static NumberEquals(v1: any, v2: any): boolean {
+        if (v1 == null || v2 == null) {
+            return false;
+        }
+        return DataUtil.toNumber(v1) === DataUtil.toNumber(v2);
     }
 
     /**
@@ -402,7 +402,7 @@ class DataUtil {
      * @param {boolean} lowercase, convert the string to lowercase
      * @param {string} defalutvalue, if no string can be get, the default value to return
      */
-    static GetString(s, lowercase = true, defaultvalue = null) {
+    static GetString(s: any, lowercase: boolean = true, defaultvalue: (string | null) = null): (string | null) {
         if (lowercase) {
             return (typeof s === 'string') ? s.trim().toLowerCase() : defaultvalue;
         }
@@ -429,10 +429,10 @@ class DataUtil {
      * matching like brackets. If null, then will use charLeft if
      * specified.
      */
-    static StripWrapper(str, charLeft = null, charRight = null) {
+    static StripWrapper(str: (string | null), charLeft: (string | null) = null, charRight: (string | null) = null): (string | null) {
         const len = (str == null) ? 0 : str.length;
 
-        const charRightMap = {
+        const charRightMap: Record<string, string> = {
             '{': '}',
             '[': ']',
             '(': ')',
@@ -442,7 +442,7 @@ class DataUtil {
             '`': '`',
         };
 
-        if (len < 2) {
+        if (str == null || len < 2) {
             return str;
         }
 
@@ -476,7 +476,7 @@ class DataUtil {
      * @return {string} string with prefix stripped if matched,
      * or else return original
      */
-    static StripPrefix(str, prefix, ignoreCase = true) {
+    static StripPrefix(str: string, prefix: string, ignoreCase: boolean = true): string {
         const s = ignoreCase ? str.toLowerCase() : str;
         const p = ignoreCase ? prefix.toLowerCase() : prefix;
         if (s.indexOf(p) !== 0) {
@@ -491,7 +491,7 @@ class DataUtil {
      *
      * @param {{}} o
      */
-    static ObjectIsEmpty(o) {
+    static ObjectIsEmpty(o: (object | null)): boolean {
         if (o == null) {
             return true;
         }
@@ -518,7 +518,7 @@ class DataUtil {
      * @see ~RemoveValueFromValuesString
      * @see ~HasValueInValuesString
      */
-    static AddValueToValuesString(valuesString, value, delimitor = '|', uppercase = true) {
+    static AddValueToValuesString(valuesString: (string | null), value: string, delimitor: string = '|', uppercase: boolean = true): (string | null) {
         const values = valuesString ? valuesString.split(delimitor) : [];
         if (uppercase) {
             value = value.toUpperCase();
@@ -541,7 +541,7 @@ class DataUtil {
      *
      * @see ~AddValueToValuesString
      */
-    static RemoveValueFromValuesString(valuesString, value, delimitor = '|', uppercase = true) {
+    static RemoveValueFromValuesString(valuesString: (string | null), value: string, delimitor: string = '|', uppercase: boolean = true): (string | null) {
         const values = valuesString ? valuesString.split(delimitor) : [];
         if (uppercase) {
             value = value.toUpperCase();
@@ -568,7 +568,7 @@ class DataUtil {
      * @see ~AddValueToValuesString
      * @see ~RemoveValueFromValuesString
      */
-    static GetValuesInValuesString(valuesString, delimitor = '|', uppercase = true) {
+    static GetValuesInValuesString(valuesString: (string | null), delimitor: string = '|', uppercase: boolean = true): string[] {
         if (valuesString == null) {
             return [];
         }
@@ -592,7 +592,7 @@ class DataUtil {
      * @see ~AddValueToValuesString
      * @see ~RemoveValueFromValuesString
      */
-    static HasValueInValuesString(valuesString, value1, value2, delimitor = '|', uppercase = true) {
+    static HasValueInValuesString(valuesString: (string | null), value1: (string | null), value2?: (string | null), delimitor: string = '|', uppercase: boolean = true): boolean {
         const _m = 'HasValueInValuesString';
         let values;
         try {
@@ -632,7 +632,7 @@ class DataUtil {
      * @param {[]} list array to remove exact duplicate objects
      * @return {[]} same array but minus duplicates
      */
-    static UniqueArray(list) {
+    static UniqueArray(list: any[]): any[] {
         if (list == null || !Array.isArray(list)) {
             return list;
         }
@@ -662,9 +662,9 @@ class DataUtil {
      * @see TagService.GetDeclaredUsertags
      * @see TagService.GetDeclaredHashtags
      */
-    static UniqueArraySortByRelevance(list, inc = false) {
+    static UniqueArraySortByRelevance(list: any[], inc: boolean = false): string[] {
         // Get tag appearance count, bigger appearance count = better relevance
-        const entrymap = {};
+        const entrymap: Record<string, number> = {};
         for (const e of list) {
             entrymap[e] = entrymap.hasOwnProperty(e) ? entrymap[e] + 1 : 1;
         }
@@ -689,7 +689,7 @@ class DataUtil {
      * @param {[]} array2
      * @return {[]} unique merged array
      */
-    static Union2Arrays(array1, array2) {
+    static Union2Arrays(array1: any[], array2: any[]): any[] {
         const s = new Set([...array1, ...array2]);
         return Array.from(s);
     }
@@ -702,7 +702,7 @@ class DataUtil {
      *
      * @return {boolean} true if values are same, false if not
      */
-    static CompareArrays(list1, list2, stack = null) {
+    static CompareArrays(list1: any, list2: any, stack: (Set<any> | null) = null): boolean {
         // if the other array is a falsy value, return
         if (list1 === list2) {
             return true;
@@ -745,7 +745,7 @@ class DataUtil {
      * @param {Array} a value to check
      * @return {boolean} true if value is null, non-array, or empty array (length zero)
      */
-    static ArrayIsEmpty(a) {
+    static ArrayIsEmpty(a: any): boolean {
         if (!a) {
             return true;
         }
@@ -765,8 +765,11 @@ class DataUtil {
      * @param {*} value value to compare (using ==)
      * @return {*} item in list that match the label == value
      */
-    static GetObjectFromArrayByValue(list, label, value) {
-        const count = list ? list.length : 0;
+    static GetObjectFromArrayByValue(list: (Array<Record<string, any>> | null), label: string, value: any): any {
+        if (list == null) {
+            return undefined;
+        }
+        const count = list.length;
         let result;
         let item;
         for (let i = 0; i < count; i++) {
@@ -789,7 +792,7 @@ class DataUtil {
      * @param {string} delim delimiter between elements. (default to comma)
      * @return {string} formatted string array representation
      */
-    static ArrayToQuotedString(a, eq = "'", sqLeft = '"', sqRight = '"', delim = ',') {
+    static ArrayToQuotedString(a: any[], eq: string = "'", sqLeft: string = '"', sqRight: string = '"', delim: string = ','): string {
         if (DataUtil.ArrayIsEmpty(a)) {
             return `${eq}${eq}`;
         }
@@ -807,7 +810,7 @@ class DataUtil {
      * @param {string} eq element quote symbole (default to single quote)
      * @return {string} format like ['a','b','c']
      */
-    static ArrayToJSString(a, eq = "'") {
+    static ArrayToJSString(a: any[], eq: string = "'"): string {
         return DataUtil.ArrayToQuotedString(a, eq, '[', ']');
     }
 
@@ -819,7 +822,7 @@ class DataUtil {
      * @param {*} defaultVal default return value if null
      * @return {[]} array, or original string if no brackets and enforceBracket=true
      */
-    static JSStringToArray(arrayStr, enforceBrackets = true, defaultVal = []) {
+    static JSStringToArray(arrayStr: string, enforceBrackets: boolean = true, defaultVal: any[] = []): any {
         if (DataUtil.StringIsEmpty(arrayStr)) {
             return defaultVal;
         }
@@ -847,7 +850,7 @@ class DataUtil {
      * @param {*} item item to check in list, recognizable by Array.indexOf()
      * @return {[]} same list but with item removed
      */
-    static RemoveFromArray(list, item) {
+    static RemoveFromArray(list: (any[] | null), item: any): (any[] | null) {
         if (list == null || list.length === 0) {
             return list;
         }
@@ -866,7 +869,7 @@ class DataUtil {
      * @param {string} text clear text to check against hashed. No-op if already array
      * @return {[]} list result array
      */
-    static Text2Array(text = '') {
+    static Text2Array(text: any = ''): any {
         if (Array.isArray(text)) {
             return text;
         }

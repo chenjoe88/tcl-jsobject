@@ -1,8 +1,8 @@
 
 class Util {
 
-  static GenRandom(seed: (number | null) = null, bytes: number = 4, base: number = 36) {
-    const byteMask: object = {
+  static GenRandom(seed: (number | string | null) = null, bytes: number = 4, base: number = 36) {
+    const byteMask: Record<number, number> = {
       2: 0x0000FFFF,
       4: 0xFFFFFFFF,
       8: 0x0000FFFFFFFFFFFF,
@@ -13,7 +13,6 @@ class Util {
     } else if (typeof seed !== 'number') {
       seed = Util.HashString(seed);
     }
-    // @ts-ignore
     const v = seed & byteMask[bytes];
     return ((v < 0) ? -v : v).toString(base).toUpperCase();
   }
@@ -30,7 +29,7 @@ class Util {
    * @param value value to match
    * @returns index position if matched, -1 if no match
    */
-  static ArrayIndexOf(list: [], label: string, value: any): number {
+  static ArrayIndexOf(list: Array<Record<string, any>>, label: string, value: any): number {
 
     let idx = 0;
 
@@ -53,7 +52,6 @@ class Util {
    * @returns index position of the removed item, -1 means not found
    */
   static ArrayRemoveItem(list:any[], value:any): number {
-    // @ts-ignore
     const index = list.indexOf(value);
     if (index > 0) {
       list.splice(index, 1);

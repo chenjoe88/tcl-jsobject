@@ -50,8 +50,8 @@ export class JSError extends Error {
         Object.setPrototypeOf(this, new.target.prototype);
 
         // Start the stack at the throw site, not inside this constructor.
-        if (typeof (Error as any).captureStackTrace === 'function') {
-            (Error as any).captureStackTrace(this, new.target);
+        if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(this, new.target);
         }
     }
 

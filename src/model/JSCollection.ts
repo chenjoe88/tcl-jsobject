@@ -1,7 +1,7 @@
-// @ts-nocheck
 
 import DataUtil from '../util/DataUtil';
 import JSObject, { JSData } from './JSObject';
+import JSError from './JSError';
 import { JSClass } from '../types';
 
 
@@ -24,17 +24,22 @@ export class JSCollection extends JSObject {
     }
   }
 
-
-  forEach(...args: any[]) {
-    const list = this.getWrappedList();
-    return list ? list.forEach(...args) : null;
+  /**
+   * The statics that getClass()-dispatched calls rely on at the collection
+   * level. JSCollection defines them all and subclasses may override them.
+   */
+  private _collectionStatics(): typeof JSCollection {
+    return this.getClass() as typeof JSCollection;
   }
 
-  setList(dataArray: JSData[]) {
-    const jsonData = this.getData(true) as JSData;
-    // @ts-ignore
-    const prevList: JSData[] = jsonData[PROP_LIST] as JSData[];
-    // @ts-ignore
+
+  forEach(callbackfn: (value: JSObject, index: number, array: JSObject[]) => void, thisArg?: any): (void | null) {
+    const list = this.getWrappedList();
+    return list ? list.forEach(callbackfn, thisArg) : null;
+  }
+
+  setList(dataArray: any[]): void {
+    const jsonData = this.getData(true);
     jsonData[PROP_LIST] = dataArray;
   }
 
@@ -49,9 +54,9 @@ export class JSCollection extends JSObject {
    *
    * @see #getWrappedList
    */
-  getList(create = false): JSObject[] {
+  getList(create = false): (JSData[] | null) {
     const dataObj = this.getData(create);
-    return dataObj ? this.getClass().GetList(dataObj, create) : null;
+    return dataObj ? this._collectionStatics().GetList(dataObj, create) : null;
   }
 
   /**
@@ -63,11 +68,8 @@ export class JSCollection extends JSObject {
    * @param {*} direction
    * @return {Array} sorted Array that replaced content
    */
-  getSortedList(field1, field2, direction = null) {
-    const itemArray = this.getList(false);
-    if (!itemArray || itemArray.length === 0) { return null; }
-
-    return Util.SortObjectsByLabel(itemArray, field1, field2, direction);
+  getSortedList(field1: string, field2?: string, direction: any = null): any[] {
+    throw new JSError('NOT_IMPLEMENTED', 'getSortedList: sorting helper never shipped with this package');
   }
 
   /**
@@ -77,7 +79,7 @@ export class JSCollection extends JSObject {
    * @param {string} field2
    * @param {string} direction
    */
-  sortContent(field1, field2, direction = null) {
+  sortContent(field1: string, field2?: string, direction: any = null): any[] {
     const sortedList = this.getSortedList(field1, field2, direction);
     if (sortedList) { this.setList(sortedList); }
     return sortedList;
@@ -91,20 +93,16 @@ export class JSCollection extends JSObject {
    *
    * @return {string[]} keyed map
    */
-  getKeyedList(create = false, field = '_id') {
-    let list = this.getList(create);
-    if (DataUtil.NotNull(list)) {
-      list = Util.MapUniqueObjectsByField(list, field, false);
-    }
-    return list;
+  getKeyedList(create = false, field = '_id'): any {
+    throw new JSError('NOT_IMPLEMENTED', 'getKeyedList: keyed-map helper never shipped with this package');
   }
 
   /**
    * Return the item in the list that has the matching
    * value of the given field.
    */
-  getItemByID(idValue) {
-    return this.getClass().GetItemByID(this.getList(), idValue);
+  getItemByID(idValue: any): any {
+    return this._collectionStatics().GetItemByID(this.getList(), idValue);
   }
 
   /**
@@ -117,8 +115,8 @@ export class JSCollection extends JSObject {
    * @see ~getItemByID
    * @see ~getItemAt
    */
-  getItemByOwnerID(userId) {
-    return this.getClass().GetItemByOwnerID(this.getList(), userId);
+  getItemByOwnerID(userId: string): any {
+    return this._collectionStatics().GetItemByOwnerID(this.getList(), userId);
   }
 
   /**
@@ -127,7 +125,7 @@ export class JSCollection extends JSObject {
    * @param {number} idx index position of item, from 0 to size() -1
    * @param {*} defaultVal
    */
-  getItemAt(idx, defaultVal = null) {
+  getItemAt(idx: number, defaultVal: any = null): any {
     const list = this.getList();
     if (!list || idx < 0 || idx > list.length) { return defaultVal; }
     return list[idx];
@@ -139,9 +137,9 @@ export class JSCollection extends JSObject {
    * @param {*} defaultVal
    * @return {XObject}
    */
-  getXItemAt(idx, defaultVal = null, type = null) {
+  getXItemAt(idx: number, defaultVal: any = null, type: any = null): any {
     const data = this.getItemAt(idx, null);
-    return (DataUtil.NotNull(data)) ? XObject.Wrap(data, type) : defaultVal;
+    return (DataUtil.NotNull(data)) ? JSObject.Wrap(data, type ?? undefined) : defaultVal;
   }
 
   /**
@@ -150,8 +148,8 @@ export class JSCollection extends JSObject {
    *
    * @param {string} idValue value of the object ID
    */
-  getItemIndexByID(idValue) {
-    return this.getClass().GetItemIndexByID(this.getList(), idValue);
+  getItemIndexByID(idValue: any): any {
+    return this._collectionStatics().GetItemIndexByID(this.getList(), idValue);
   }
 
   /**
@@ -167,9 +165,9 @@ export class JSCollection extends JSObject {
    * @see ~getItemByField
    * @see ~getItemsByField
    */
-  getItemsIndicesByField(field, value, max = -1) {
-    const list = this.getList(null);
-    return list ? XMList.GetItemIndicesByField(list, field, value, max) : null;
+  getItemsIndicesByField(field: string, value: any, max = -1): (number[] | null) {
+    const list = this.getList(false);
+    return list ? JSCollection.GetItemIndicesByField(list, field, value, max) : null;
   }
 
   /**
@@ -182,8 +180,8 @@ export class JSCollection extends JSObject {
    *
    * @see ~GetItemIndicesByField
    */
-  getItemByField(field, value) {
-    return this.getClass().GetItemByField(this.getList(), field, value);
+  getItemByField(field: string, value: any): any {
+    return this._collectionStatics().GetItemByField(this.getList(), field, value);
   }
 
   /**
@@ -200,8 +198,8 @@ export class JSCollection extends JSObject {
    * @see ~getItemIndicesByField
    * @see ~getItemByField
    */
-  getItemsByField(field, value, max = -1) {
-    return field ? XMList.GetItemsByField(this.getList(), field, value, max) : null;
+  getItemsByField(field: string, value: any, max = -1): (any[] | null) {
+    return field ? JSCollection.GetItemsByField(this.getList(), field, value, max) : null;
   }
 
 
@@ -219,9 +217,9 @@ export class JSCollection extends JSObject {
    * @see ~getItemIndicesByField
    * @see ~getItemByField
    */
-  getXItemsByField(field, value, max = -1) {
+  getXItemsByField(field: string, value: any, max = -1): (JSObject[] | null) {
     const list = this.getItemsByField(field, value, max);
-    return list ? XMList.ArrayToWrappedArray(list) : null;
+    return list ? JSCollection.ArrayToWrappedArray(list) : null;
   }
 
   /**
@@ -235,9 +233,9 @@ export class JSCollection extends JSObject {
    *
    * @see ~getXItemsByField
    */
-  getItemsByMatcher(matcher, max = -1) {
+  getItemsByMatcher(matcher: (item: any) => any, max = -1): (any[] | null) {
     const list = this.getList();
-    return list ? XMList.GetItemsByMatcher(list, matcher, max) : null;
+    return list ? JSCollection.GetItemsByMatcher(list, matcher, max) : null;
   }
 
   /**
@@ -252,9 +250,9 @@ export class JSCollection extends JSObject {
    *
    * @see ~getItemsByMatcher
    */
-  getXItemsByMatcher(matcher, max = -1) {
+  getXItemsByMatcher(matcher: (item: any) => any, max = -1): (JSObject[] | null) {
     const list = this.getItemsByMatcher(matcher, max);
-    return list ? XMList.ArrayToWrappedArray(list) : null;
+    return list ? JSCollection.ArrayToWrappedArray(list) : null;
   }
 
   /**
@@ -265,8 +263,8 @@ export class JSCollection extends JSObject {
    * @param {string} value of the field to match
    * @return {*} matched item
    */
-  getItemIndexByField(field, value) {
-    return this.getClass().GetItemIndexByField(this.getList(), field, value);
+  getItemIndexByField(field: string, value: any): number {
+    return this._collectionStatics().GetItemIndexByField(this.getList(), field, value);
   }
 
   /**
@@ -276,7 +274,7 @@ export class JSCollection extends JSObject {
    *
    * @see ~size
    */
-  getItemCount() {
+  getItemCount(): number {
     const list = this.getList();
     return list ? list.length : 0;
   }
@@ -287,7 +285,7 @@ export class JSCollection extends JSObject {
    * @return {number} actual count or zero
    * @see ~getItemCuont
    */
-  size() {
+  size(): number {
     return this.getItemCount();
   }
 
@@ -298,7 +296,7 @@ export class JSCollection extends JSObject {
    * @param {number} count number of items to remove (default 0)
    * @return {object[]} removed items (not wrapped)
    */
-  removeItems(startIdx, count = 0) {
+  removeItems(startIdx: number, count = 0): any[] {
     const list = this.getList();
     return list ? list.splice(startIdx, count) : [];
   }
@@ -310,8 +308,8 @@ export class JSCollection extends JSObject {
    * @param {string} idValue
    * @return {*} removed object if matched ID in _id field. Null otherwise.
    */
-  removeItemByID(idValue) {
-    const retval = this.getClass().RemoveItemByID(this.getList(), idValue);
+  removeItemByID(idValue: any): any {
+    const retval = this._collectionStatics().RemoveItemByID(this.getList(), idValue);
     if (retval) { this.setDirty(); }
     return retval;
   }
@@ -324,8 +322,8 @@ export class JSCollection extends JSObject {
    * @param {*} value
    * @return {*} removed object if matched. Null otherwise.
    */
-  removeItemByField(field, value) {
-    const retval = this.getClass().RemoveItemByField(this.getList(), field, value);
+  removeItemByField(field: string, value: any): any {
+    const retval = this._collectionStatics().RemoveItemByField(this.getList(), field, value);
     if (retval) { this.setDirty(); }
     return retval;
   }
@@ -341,32 +339,32 @@ export class JSCollection extends JSObject {
    *
    * @see ~setXObjects
    */
-  getWrappedList(create = false, wrapperFunc = JSObject.Wrap) {
+  getWrappedList(create = false, wrapperFunc: (json: JSData) => JSObject = JSObject.Wrap): (JSObject[] | null) {
     const jsonItemList = this.getList(create);
     if (jsonItemList == null) { return jsonItemList; }
-    return this.getClass().ArrayToWrappedArray(jsonItemList, wrapperFunc);
+    return this._collectionStatics().ArrayToWrappedArray(jsonItemList, wrapperFunc);
   }
 
-  isEmpty() {
+  isEmpty(): any {
     const jsonObj = this.getData();
     const list = jsonObj || [null];
-    return list.length;
+    return (list as any).length;
   }
 
-  includesItem(jsonItem) {
+  includesItem(jsonItem: any): boolean {
     const list = this.getList(false);
     return list ? list.includes(jsonItem) : false;
   }
 
-  includesXMObject(xmObject) {
+  includesXMObject(xmObject: JSObject): boolean {
     return this.includesItem(xmObject.getData());
   }
 
-  includesItemByField(field, value) {
+  includesItemByField(field: string, value: any): boolean {
     return DataUtil.NotNull(this.getItemByField(field, value));
   }
 
-  includesItemByID(idValue) {
+  includesItemByID(idValue: any): any {
     return this.getItemByField('_id', idValue);
   }
 
@@ -379,9 +377,10 @@ export class JSCollection extends JSObject {
    *
    * @see ~addXMObject
    */
-  addItem(data, index = -1) {
+  addItem(data: any, index = -1): boolean {
     const jsonItem = JSObject.Unwrap(data);
     const list = this.getList(true);
+    if (list == null) { return false; }
     if ((index < 0) || (index >= list.length)) { list.push(jsonItem); } else { list.splice(index, 0, jsonItem); }
     this.setDirty();
     return true;
@@ -395,8 +394,8 @@ export class JSCollection extends JSObject {
    * @see ~addItem
    * @see ~addXObjects
    */
-  addXObject(xmObject) {
-    if (!this.assertNotNull(xmObject, 'addXMObject')) { return false; }
+  addXObject(xmObject: JSObject): boolean {
+    if (xmObject == null) { return false; }
     return this.addItem(xmObject);
   }
 
@@ -407,7 +406,7 @@ export class JSCollection extends JSObject {
    * @param {XObject[]} xmObjects wrapped object but json OK
    * @return {number} number of objects added
    */
-  addXItems(xmObjects) {
+  addXItems(xmObjects: any[]): number {
     // xmObjects.forEach(xObject => this.addXObject(xObject));
     const size = xmObjects ? xmObjects.length : 0;
     let added = 0;
@@ -428,7 +427,7 @@ export class JSCollection extends JSObject {
    * @see ~addXItems
    * @deprecated
    */
-  addXObjects(xmObjects) {
+  addXObjects(xmObjects: any[]): number {
     return this.addXItems(xmObjects);
   }
 
@@ -441,7 +440,7 @@ export class JSCollection extends JSObject {
    * @see ~getXItemsByField
    * @see ~getXItemsByMatcher
    */
-  getXItems() {
+  getXItems(): (JSObject[] | null) {
     return this.getWrappedList();
   }
 
@@ -451,19 +450,16 @@ export class JSCollection extends JSObject {
    *
    * @see ~getXItems
    */
-  getXObjects() {
+  getXObjects(): (JSObject[] | null) {
     return this.getWrappedList();
   }
 
-  getSortedXItems(field = null) {
-    const list = this.getList();
-    Util.SortUniqueObjectsByLabel(list, field);
-    list.reverse();
-    return list;
+  getSortedXItems(field: any = null): any {
+    throw new JSError('NOT_IMPLEMENTED', 'getSortedXItems: sorting helper never shipped with this package');
   }
 
-  getSortedByCreateTime() {
-    return this.getSortedXObject(XObjectProps.CREATED_DATE);
+  getSortedByCreateTime(): any {
+    throw new JSError('NOT_IMPLEMENTED', 'getSortedByCreateTime: sorting helper never shipped with this package');
   }
 
   /**
@@ -474,9 +470,9 @@ export class JSCollection extends JSObject {
    * @param {boolean} includeNull true to include null values
    * @return {[]} list of IDs, or null if empty
    */
-  getItemIds(unique = true, includeNull = false) {
+  getItemIds(unique = true, includeNull = false): (any[] | null) {
     const jsonList = this.getData(false);
-    return jsonList ? XMList.GetItemIDs(jsonList, unique, includeNull) : null;
+    return jsonList ? JSCollection.GetItemIDs(jsonList, unique, includeNull) : null;
   }
 
   /**
@@ -488,9 +484,9 @@ export class JSCollection extends JSObject {
    * @param {boolean} includeNull true to include null for objects without the field
    * @return {[]=} list of results, or null if null list is passed in
    */
-  toFieldValueList(field = null, unique = true, includeNull = false) {
+  toFieldValueList(field: (string | null) = null, unique = true, includeNull = false): any[] {
     const jsonList = this.getList(false);
-    return jsonList ? XMList.ToFieldValueList(jsonList, field, unique, includeNull) : [];
+    return jsonList ? JSCollection.ToFieldValueList(jsonList, field, unique, includeNull) : [];
   }
 
   /**
@@ -500,17 +496,18 @@ export class JSCollection extends JSObject {
    * @param {{}} obj check if object was added.
    *
    */
-  includes(obj) {
-    return this.getList().includes(obj);
+  includes(obj: any): boolean {
+    // Crashes without a list, as it always has: callers own the precondition.
+    return this.getList()!.includes(obj);
   }
-  indexOf(obj) {
-    return this.getList().indexOf(obj);
+  indexOf(obj: any): number {
+    return this.getList()!.indexOf(obj);
   }
-  splice(idx, n) {
-    return this.getList().splice(idx, n);
+  splice(idx: number, n: number): JSData[] {
+    return this.getList()!.splice(idx, n);
   }
-  length() {
-    return this.getList().length;
+  length(): number {
+    return this.getList()!.length;
   }
 
   // *************************************************************
@@ -526,15 +523,15 @@ export class JSCollection extends JSObject {
    * Return the default folder/table/collection name used
    * for storing ranked lists.
    */
-  static GetFolderName() {
+  static GetFolderName(): string {
     return 'NONE';
   }
 
-  static GetName() {
+  static GetName(): string {
     return _CLSNAME;
   }
 
-  static GetTypeID() {
+  static GetTypeID(): string {
     return _CLSNAME;
   }
 
@@ -552,8 +549,8 @@ export class JSCollection extends JSObject {
    * @return new array list with each item wrapped by
    * the given wrapping function
    */
-  static ArrayToWrappedArray(itemList, wrapperFunc = JSObject.Wrap) {
-    const result = [];
+  static ArrayToWrappedArray(itemList: any[], wrapperFunc: (json: JSData) => JSObject = JSObject.Wrap): JSObject[] {
+    const result: JSObject[] = [];
     itemList.forEach((jsonItem) => {
       result.push(wrapperFunc(jsonItem));
     });
@@ -590,13 +587,12 @@ export class JSCollection extends JSObject {
    * @param create true to create internal list if doesn't exist
    *
    */
-  static GetList(jsonData:JSData, create = false): JSData[] {
+  static GetList(jsonData:JSData, create = false): any {
     jsonData = this.Unwrap(jsonData);
-    // @ts-ignore
-    let list = jsonData[PROP_LIST];
+    // The list property is owned by this class and always written as an array.
+    let list = jsonData[PROP_LIST] as (JSData[] | undefined);
     if ((list == null) && (create === true)) {
       list = [];
-      // @ts-ignore
       jsonData[PROP_LIST] = list;
     }
     return list;
@@ -611,11 +607,11 @@ export class JSCollection extends JSObject {
    * @param includeNull true to include null for objects without the field
    * @return list of results, or null if null list is passed in
    */
-  static ToFieldValueList(list, field = null, unique = true, includeNull = false) {
-    if (field == null) { field = XObjectProps.ID; }
+  static ToFieldValueList(list: any[], field: (string | null) = null, unique = true, includeNull = false): any[] {
+    if (field == null) { field = JSObject.PROP_ID; }
 
     const resultList = [];
-    const valueMap = {};
+    const valueMap: Record<string, boolean> = {};
     const len = (list) ? list.length : 0;
     let item;
     let itemValue;
@@ -642,7 +638,7 @@ export class JSCollection extends JSObject {
    * @param {boolean} unique true if don't return duplicates
    * @param {boolean} includeNull true to include null values
    */
-  static GetItemIDs(listObj, unique = true, includeNull = false) {
+  static GetItemIDs(listObj: any, unique = true, includeNull = false): (any[] | null) {
     listObj = this.Unwrap(listObj);
     const list = listObj ? listObj[PROP_LIST] : null;
     if (list == null) { return null; }
@@ -657,10 +653,10 @@ export class JSCollection extends JSObject {
    * @param {boolean} unique true if unique
    * @param {boolean} includeNull true to include null for objects without the field
    */
-  static ToFieldValueXList(list, field = null, unique = true, includeNull = false) {
-    list = XMList.Unwrap(list);
-    const jsonList = list ? list.map(xitem => JSObject.Unwrap(xitem)) : null;
-    return jsonList ? XMList.ToFieldValueList(jsonList, field, unique, includeNull) : null;
+  static ToFieldValueXList(list: any, field: (string | null) = null, unique = true, includeNull = false): (any[] | null) {
+    list = JSCollection.Unwrap(list);
+    const jsonList = list ? list.map((xitem: any) => JSObject.Unwrap(xitem)) : null;
+    return jsonList ? JSCollection.ToFieldValueList(jsonList, field, unique, includeNull) : null;
   }
 
   /**
@@ -674,8 +670,8 @@ export class JSCollection extends JSObject {
    *
    * @return first item that matches, or null if none
    */
-  static GetItemIndexByField(list, field, value) {
-    const indices = XMList.GetItemIndicesByField(list, field, value, 1);
+  static GetItemIndexByField(list: any, field: string, value: any): number {
+    const indices = JSCollection.GetItemIndicesByField(list, field, value, 1);
     return indices ? indices[0] : -1;
   }
 
@@ -691,7 +687,7 @@ export class JSCollection extends JSObject {
    *
    * @return {[]=} items that matched, or null if none
    */
-  static GetItemIndicesByField(list, field, value, max = -1) {
+  static GetItemIndicesByField(list: any, field: string, value: any, max = -1): (number[] | null) {
     if (list === null || list.length === 0) { return null; }
 
     const indices = [];
@@ -719,7 +715,7 @@ export class JSCollection extends JSObject {
    *
    * @return {*} item in the list that matched the field/value
    */
-  static GetItemByField(list, field, value) {
+  static GetItemByField(list: any, field: string, value: any): any {
     if (list === null || list.length === 0) { return null; }
 
     let item;
@@ -741,13 +737,13 @@ export class JSCollection extends JSObject {
    *
    * @return {[]=} items that matched the field/value
    */
-  static GetItemsByField(list, field, value, max = -1) {
+  static GetItemsByField(list: any, field: string, value: any, max = -1): (any[] | null) {
     if (list === null || list.length === 0) { return null; }
 
     const result = [];
     let item;
     for (let i = 0; i < list.length; i++) {
-      item = list[item];
+      item = list[i];
       if (item && item[field] === value) {
         result.push(item);
         if (max !== -1) {
@@ -769,7 +765,7 @@ export class JSCollection extends JSObject {
    *
    * @return {[]=} items that matched the field/value
    */
-  static GetItemsByMatcher(list, matcher, max = -1) {
+  static GetItemsByMatcher(list: any, matcher: (item: any) => any, max = -1): (any[] | null) {
     if (list === null || list.length === 0) { return null; }
 
     const result = [];
@@ -789,7 +785,7 @@ export class JSCollection extends JSObject {
     return result.length > 0 ? result : null;
   } // GetItemsByMatcher
 
-  static GetItemIndexByID(list, value) {
+  static GetItemIndexByID(list: any, value: any): (number[] | null) {
     return this.GetItemIndicesByField(list, this.PROP_ID, value, 1);
   }
 
@@ -800,7 +796,7 @@ export class JSCollection extends JSObject {
    * @param {XMList} list json/XMList
    * @param {*} value
    */
-  static GetItemByID(list, value) {
+  static GetItemByID(list: any, value: any): any {
     return this.GetItemByField(list, this.PROP_ID, value);
   }
 
@@ -812,8 +808,10 @@ export class JSCollection extends JSObject {
    *
    * @return {XObject} found item
    */
-  static GetItemByOwnerID(list, userId) {
-    return this.GetItemByField(list, XMList.PROP_OWNERID, userId);
+  static GetItemByOwnerID(list: any, userId: string): any {
+    // PROP_OWNERID was never declared on this class; kept as-is from the
+    // XMList origins, so this matches nothing until a subclass declares it.
+    return this.GetItemByField(list, (this as any).PROP_OWNERID, userId);
   }
 
 
@@ -828,7 +826,7 @@ export class JSCollection extends JSObject {
    *
    * @return item removed, or null if can't match field/value
    */
-  static RemoveItemByField(list, field, value) {
+  static RemoveItemByField(list: any, field: string, value: any): any {
     const idx = this.GetItemIndexByField(list, field, value);
     if (idx === -1) { return null; }
 
@@ -837,7 +835,7 @@ export class JSCollection extends JSObject {
     return objectAtIdx;
   }
 
-  static RemoveItemByID(list, value) {
+  static RemoveItemByID(list: any, value: any): any {
     return this.RemoveItemByField(list, '_id', value);
   }
 } // class XMList

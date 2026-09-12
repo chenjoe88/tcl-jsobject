@@ -4,24 +4,37 @@ import { JSClass, JSType } from "../types";
 const _CLSNAME_ = 'MetaUtil';
 const _logger = Logger.Get(_CLSNAME_);
 
+/**
+ * The registry deliberately lives on `global` rather than in module state:
+ * when a dependency tree carries more than one copy of this package, every
+ * copy must still see one shared type-to-class map, or deserialization
+ * breaks depending on which copy wrapped the data.
+ */
+type RegistryHost = typeof globalThis & { model?: Record<string, JSClass> };
+
 export class MetaUtil {
+
+  /** The one place the untyped `global` store is reached. */
+  private static Registry(): Record<string, JSClass> {
+    const host = global as RegistryHost;
+    if (host.model == null) { host.model = {}; }
+    return host.model;
+  }
 
   /**
    *
    * @param {Function} clsObj
-   * @returns {string | null}
+   * @returns the declared or derived type label, or null if undeterminable
    */
-  static DetermineClassType(clsObj: Function): string {
+  static DetermineClassType(clsObj: JSClass): (string | null) {
     const _m = 'DetermineClassType';
-    let type = null;
+    let type: (string | null) = null;
     if (clsObj == null) {
       _logger.error(_m, 'Passed in null class!');
-      // @ts-ignore
       return null;
     }
 
-    if (clsObj.hasOwnProperty('GetTypeID')) {
-        // @ts-ignore
+    if (clsObj.hasOwnProperty('GetTypeID') && clsObj.GetTypeID) {
         type = clsObj.GetTypeID();
     } else if (clsObj.hasOwnProperty('name')) {
         type = clsObj.name;
@@ -46,7 +59,7 @@ export class MetaUtil {
    *
    * @see MetaUtil.GetClassByType
    */
-  static RegisterType(clsObj:JSClass, type?:JSType): boolean {
+  static RegisterType(clsObj:JSClass, type?:(JSType | null)): boolean {
     const _m = 'RegisterType';
 
     if (type == null) {
@@ -61,17 +74,13 @@ export class MetaUtil {
     let registered = false;
 
     // We use a model dictionary within 'global' to track the mapping lazily
-    // @ts-ignore
-    if (global.model == null) { global.model = {}; }
+    const registry = MetaUtil.Registry();
 
-    // @ts-ignore
-    if (global.model.hasOwnProperty(type)) {
+    if (registry.hasOwnProperty(type)) {
       // Shoudn't happen since we are checking for class object's own property (not inherited)
-      // @ts-ignore
-    _logger.debug(_m, `Type: ${type} already registerd to class constructor: ${global.model[type]}`, { _m });
+    _logger.debug(_m, `Type: ${type} already registerd to class constructor: ${registry[type]}`, { _m });
     } else {
-      // @ts-ignore
-      global.model[type] = clsObj;
+      registry[type] = clsObj;
       // let clsname = ObjectBase.GetClassNameOf(clsObj);
     }
     return registered;
@@ -80,7 +89,7 @@ export class MetaUtil {
   /**
    *
    * @param typeID
-   * @returns
+   * @returns true if the type is gone from the registry after this call
    */
   static DeregisterType(typeID:JSType): boolean {
     const _m = 'DeregisterType';
@@ -88,12 +97,10 @@ export class MetaUtil {
       _logger.error(_m, 'Null type');
       return false;
     }
-    // @ts-ignore
-    if (global.model == null || !global.model.hasOwnProperty(typeID)) { return null; }
-    // @ts-ignore
-    delete global.model[typeID];
-    // @ts-ignore
-    return (global.model[typeID] == null);
+    const registry = MetaUtil.Registry();
+    if (!registry.hasOwnProperty(typeID)) { return false; }
+    delete registry[typeID];
+    return (registry[typeID] == null);
   }
 
   /**
@@ -107,12 +114,9 @@ export class MetaUtil {
    */
   static GetClassNameOf(ClsObj:JSClass, defaultVal:JSType = 'Unknown'): string {
     let name;
-    if (ClsObj.hasOwnProperty('GetName')) {
-    // @ts-ignore
+    if (ClsObj.hasOwnProperty('GetName') && ClsObj.GetName) {
     name = ClsObj.GetName();
     } else {
-      // @ts-ignore
-
       const inst = new ClsObj();
       if (inst.hasOwnProperty('classname')) { name = inst.classname; }
     }
@@ -129,19 +133,17 @@ export class MetaUtil {
    * @see MetaUtil.DeregisterType
    * @see JSObject.Wrap
    */
-  static GetClassByType(typeID:JSType): JSClass {
+  static GetClassByType(typeID:JSType): (JSClass | null) {
     const _m = 'GetClassByType';
     if (typeID == null) {
       _logger.error(_m, 'Null type');
-      // @ts-ignore
       return null;
     }
 
-    // @ts-ignore
-    if (global.model == null || !global.model.hasOwnProperty(typeID)) { return null; }
+    const registry = MetaUtil.Registry();
+    if (!registry.hasOwnProperty(typeID)) { return null; }
 
-    // @ts-ignore
-    return global.model[typeID];
+    return registry[typeID];
   }
 
 }

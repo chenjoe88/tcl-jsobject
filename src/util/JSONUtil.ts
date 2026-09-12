@@ -1,11 +1,10 @@
 
-import EncryptorClass from 'simple-encryptor';
+import { createEncryptor } from 'simple-encryptor';
 import DataUtil from "./DataUtil";
 
 const ENC_INFO_KEY = 'CA@#$784#!A02dF3l9';
 
-// @ts-ignore
-const encryptor4JSON =  EncryptorClass(ENC_INFO_KEY);
+const encryptor4JSON = createEncryptor(ENC_INFO_KEY);
 
 class JSONUtil {
 
@@ -38,7 +37,7 @@ class JSONUtil {
      *
      * @see ~GetEmbeddedJSONKeys
      */
-    static GetEmbeddedJSONPaths(jsonObj:{}, path:string, defaultVal:(string|null) = null, delim:string = '.') {
+    static GetEmbeddedJSONPaths(jsonObj:Record<string, any>, path:string, defaultVal:(string|null) = null, delim:string = '.') {
         const keyArray = (path == null) ? null : String(path).split(delim);
         return (keyArray == null) ? defaultVal : this.GetEmbeddedJSONKeys(jsonObj, keyArray, defaultVal);
     }
@@ -53,7 +52,7 @@ class JSONUtil {
      *
      * @see ~GetEmbeddedJSONPaths
      */
-    static GetEmbeddedJSONKeys(jsonObj:{}, keyArray:Array<string>, defaultVal:(string|null) = null) {
+    static GetEmbeddedJSONKeys(jsonObj:Record<string, any>, keyArray:Array<string>, defaultVal:(string|null) = null) {
         if (!Array.isArray(keyArray)) {
             return defaultVal;
         }
@@ -63,7 +62,6 @@ class JSONUtil {
         }
 
         const key = keyArray[0];
-        // @ts-ignore
         let value = jsonObj[key];
 
         if (keyArray.length > 1) {
@@ -90,9 +88,9 @@ class JSONUtil {
      *
      * @see ~ImportObjectFields
      */
-    static ExportObjectFields(jsonObj:{}, inFields:(string[]|null) = null, exFields:(string[]|null) = null, defaultVal:any = {}): {} {
+    static ExportObjectFields(jsonObj:Record<string, any>, inFields:(string[]|null) = null, exFields:(string[]|null) = null, defaultVal:any = {}): {} {
         let value;
-        const results = {};
+        const results: Record<string, any> = {};
         let count = 0;
         for (const label in jsonObj) {
             if (inFields && !(inFields.includes(label))) {
@@ -101,10 +99,8 @@ class JSONUtil {
             if (exFields && (exFields.includes(label))) {
                 continue;
             }
-            // @ts-ignore
             value = jsonObj[label];
 
-            // @ts-ignore
             results[label] = value;
             count++;
         }
@@ -121,19 +117,16 @@ class JSONUtil {
      *
      * @see ~ExportObjectFields
      */
-    static ImportObjectFields(jsonObj:{}, importData:{}, override:boolean = false): any {
-        const oldData = {};
+    static ImportObjectFields(jsonObj:Record<string, any>, importData:Record<string, any>, override:boolean = false): any {
+        const oldData: Record<string, any> = {};
         let replaceCount = 0;
         let value;
         for (const label in importData) {
-            // @ts-ignore
             value = jsonObj[label];
             if (value) {
-            // @ts-ignore
             oldData[label] = value;
                 replaceCount++;
             }
-            // @ts-ignore
             jsonObj[label] = importData[label];
         }
         return (replaceCount > 0) ? oldData : null;
@@ -147,15 +140,12 @@ class JSONUtil {
      *
      * @param {object} obj
      */
-    static RecursiveClone(obj:object): object {
-        const clone = {};
+    static RecursiveClone(obj:Record<string, any>): object {
+        const clone: Record<string, any> = {};
         for (const i in obj) {
-            // @ts-ignore
             if (DataUtil.NotNull(obj[i]) && typeof (obj[i]) === 'object') {
-                // @ts-ignore
                 clone[i] = JSONUtil.CloneObject(obj[i]);
         } else {
-                // @ts-ignore
                 clone[i] = obj[i];
             }
         }
@@ -181,7 +171,7 @@ class JSONUtil {
      * @param {object} obj
      * @returns {object}
      */
-    static CloneObject(obj:object): object {
+    static CloneObject(obj:object): any {
         return JSON.parse(JSON.stringify(obj));
     }
 
@@ -202,10 +192,9 @@ class JSONUtil {
         const arraySize = objArray ? objArray.length : 0;
         let value;
         const valueArray = [];
-        let obj;
+        let obj: Record<string, any>;
         for (let i = 0; i < arraySize; i++) {
             obj = objArray[i];
-            // @ts-ignore
             value = obj[label];
             if (value == null && (keepNull === false)) {
                 continue;

@@ -32,6 +32,11 @@ export interface JSData {
     [PROP_NAME]?: string,
     [PROP_CREATED_DATE]?: number,
     [PROP_UPDATED_DATE]?: number
+    /*
+     * JSData is arbitrary JSON with the reserved keys above; everything else
+     * is caller-defined and read back through the typed accessors.
+     */
+    [key: string]: unknown;
 };
 
 /**
@@ -75,8 +80,7 @@ export class JSObject {
             this._setClass(classObj);
         }
         if (typeID == null) {
-            // @ts-ignore
-            typeID = classObj.GetTypeID();
+            typeID = classObj.GetTypeID?.();
             if (typeID == null) {
                 _logger.trace('_c', 'Class has no type!', classObj);
                 typeID = JSTYPE_OBJECT;
@@ -116,10 +120,19 @@ export class JSObject {
             rightClassObj =this[PROP_JSCLASS];
         }
         else {
-            // @ts-ignore
-            rightClassObj = this.constructor.GetClass();
+            const ctor = this.constructor as JSClass;
+            rightClassObj = ctor.GetClass ? ctor.GetClass() : ctor;
         }
         return rightClassObj;
+    }
+
+    /**
+     * The statics that getClass()-dispatched calls rely on. JSObject defines
+     * them all and subclasses may override them. This is the one place the
+     * generic JSClass is narrowed to this package's own statics contract.
+     */
+    private _classStatics(): typeof JSObject {
+        return this.getClass() as typeof JSObject;
     }
 
     /**
@@ -163,15 +176,13 @@ export class JSObject {
      * @param {string} idVal
      * @returns {string | null}
      */
-    _setId(idVal:string): string {
-        // @ts-ignore
-        return this.getClass().SetId(this.getData(true), idVal);
+    _setId(idVal:string): boolean {
+        return this._classStatics().SetId(this.getData(true), idVal);
     }
 
     _clearId(): any {
         const data = this.getData(false);
-        // @ts-ignore
-        return data ? this.getClass().ClearId(data) : null;
+        return data ? this._classStatics().ClearId(data) : null;
     }
 
     /**
@@ -191,10 +202,9 @@ export class JSObject {
      * @param {JSType} typeID optional. If not specified then will try to determine
      * @returns {boolean} true if setting type ID successfully
      */
-    _setTypeID(typeID: JSType): boolean {
+    _setTypeID(typeID: (JSType | null)): boolean {
         const _m = '_setTypeID';
         if (typeID == null) {
-            // @ts-ignore
             typeID = MetaUtil.DetermineClassType(this.getClass());
             if (typeID == null) {
                 const cname = this.getClassname();
@@ -285,10 +295,9 @@ export class JSObject {
      * @see #getData()
      * @see JSObject#CloneData()
      */
-    cloneData(): JSData {
+    cloneData(): (JSData | null) {
         const data = this.getData(false);
         if (data == null) {
-            // @ts-ignore
             return null;
         }
         return JSObject.CloneData(data);
@@ -357,15 +366,14 @@ export class JSObject {
      * @see #setObject
      */
     getObject(label: string, create:boolean = false): any {
-        // @ts-ignore
-        let objData = this[label];
+        // Expando storage on the wrapper itself, outside the wrapped JSON.
+        const self = this as unknown as Record<string, any>;
+        let objData = self[label];
         if ((objData == null) && create) {
             objData = {};
-            // @ts-ignore
-            this[label] = objData;
+            self[label] = objData;
         }
-        // @ts-ignore
-        return this[label];
+        return self[label];
     }
 
     /**
@@ -383,12 +391,11 @@ export class JSObject {
         jsonObj = JSObject.Unwrap(jsonObj);
         let prevObj = null;
 
-        // @ts-ignore
-        if (this[label] !== jsonObj) {
-            // @ts-ignore
-            prevObj = this[label];
-            // @ts-ignore
-            this[label] = jsonObj;
+        // Expando storage on the wrapper itself, outside the wrapped JSON.
+        const self = this as unknown as Record<string, any>;
+        if (self[label] !== jsonObj) {
+            prevObj = self[label];
+            self[label] = jsonObj;
             this.setDirty();
         }
         return prevObj;
@@ -403,12 +410,13 @@ export class JSObject {
    *
    * @see JSObject#getAuxValue
    */
-  getAuxData(create:boolean = false): JSData {
+  getAuxData(create: true): JSData;
+  getAuxData(create?: boolean): (JSData | undefined);
+  getAuxData(create:boolean = false): (JSData | undefined) {
     if (this[PROP_AUX_DATA] == null && create) {
       this[PROP_AUX_DATA] = {};
       // this.warn("getAuxData", "delayed creation of data content");
     }
-    // @ts-ignore
     return this[PROP_AUX_DATA];
   }
 
@@ -419,9 +427,9 @@ export class JSObject {
    *
    * @param {any} defaultVal
    */
-  getWrappedAuxData(defaultVal:any = null): JSObject {
+  getWrappedAuxData(defaultVal:any = null): (JSObject | undefined) {
     const data = this.getAuxData(false);
-    return data ? JSObject.Wrap(data) : data;
+    return data ? JSObject.Wrap(data) : undefined;
   }
   /**
    * Replace auxillary data wrapped by this object
@@ -563,8 +571,7 @@ export class JSObject {
     setObjectField(label:string, field:string, value:any): any {
         // _logger.log("setObjectField", `label=${label}, field=${field}, value=${value}`);
 
-        // @ts-ignore
-        const oldValue = this.getClass().SetObjectField(this.getObject(label, true), field, value);
+        const oldValue = this._classStatics().SetObjectField(this.getObject(label, true), field, value);
         if (oldValue !== value) {
             this.setDirty();
             const propname = this.getJSPropertyPath(label, field);
@@ -586,8 +593,7 @@ export class JSObject {
      * @see ~setX
      */
     setJSObjectField(label:string, field:string, jsobj:JSObject): JSObject {
-        // @ts-ignore
-        const oldValue = this.getClass().SetJSObjectField(this.getObject(label, true), field, jsobj);
+        const oldValue = this._classStatics().SetJSObjectField(this.getObject(label, true), field, jsobj);
 
         // Can't really compare...
         if (oldValue !== jsobj) {
@@ -608,8 +614,7 @@ export class JSObject {
     importObjectFields(props:{}, override:boolean = false): {} {
         const data = this.getData(true);
 
-        // @ts-ignore
-        const replacedData = this.getClass().ImportObjectFields(data, props, override);
+        const replacedData = this._classStatics().ImportObjectFields(data, props, override);
         if (replacedData && replacedData.keys && replacedData.keys.length > 0) {
             this.setDirty();
         }
@@ -629,8 +634,7 @@ export class JSObject {
         if (obj == null) {
             return defaultVal;
         }
-        // @ts-ignore
-        return this.getClass().GetObjectField(obj, field, defaultVal);
+        return this._classStatics().GetObjectField(obj, field, defaultVal);
     } // getObjectField
 
     /**
@@ -647,8 +651,7 @@ export class JSObject {
         if (obj == null) {
             return defaultVal;
         }
-        // @ts-ignore
-        return this.getClass().GetJSObjectField(obj, field, defaultVal);
+        return this._classStatics().GetJSObjectField(obj, field, defaultVal);
     } // getObjectField
 
     /**
@@ -667,8 +670,7 @@ export class JSObject {
         if (obj == null) {
             return false;
         }
-        // @ts-ignore
-        return this.getClass().HasObjectField(obj, field, existOK);
+        return this._classStatics().HasObjectField(obj, field, existOK);
     } // hasObjectField
 
     /**
@@ -684,8 +686,7 @@ export class JSObject {
         if (obj == null) {
             return false;
         }
-        // @ts-ignore
-        const cleared = this.getClass().ClearObjectField(obj, field);
+        const cleared = this._classStatics().ClearObjectField(obj, field);
         if (cleared) {
             this.setDirty();
             const propname = this.getJSPropertyPath(label, field);
@@ -815,18 +816,16 @@ export class JSObject {
      * @param jsobject object to reference as parent
      * @return previous parent if any, or null
      */
-    setJSParent(jsobject: JSObject): JSObject {
-        let retval = this.getJSParent(null);
+    setJSParent(jsobject: JSObject): (JSObject | null) {
+        let retval: (JSObject | null) = this.getJSParent(null);
         if (jsobject) {
             // let parentId = JSObject.GetId(xobj); // in case it's only json
             // retval = this.set(JSObject.PROP_PARENT, parentId);
             this.setTransientJSParent(jsobject);
         } else {
-            // @ts-ignore
             retval = null;
         }
 
-        // @ts-ignore
         return retval;
     }
 
@@ -963,12 +962,11 @@ export class JSObject {
      *
      * @see #getLabels()
      */
-    getMultiple(fields:string[], defaultVal?:any): string[] {
+    getMultiple(fields:string[], defaultVal?:any): (any[] | null) {
         if (fields == null) {
             fields = this.getLabels();
         }
         if (!Array.isArray(fields)) {
-            // @ts-ignore
             return null;
         }
         const len = fields.length;
@@ -1002,7 +1000,7 @@ export class JSObject {
      * @param defaultVal
      * @return
      */
-    getNumber(field:string, defaultVal?:any): number {
+    getNumber(field:string, defaultVal?:any): (number | null) {
         const val = this.get(field, null);
         return val ? DataUtil.toNumber(val, defaultVal) : defaultVal;
     }
@@ -1075,10 +1073,9 @@ export class JSObject {
      * or null if no parent.
      */
 
-    setDirty(): boolean {
+    setDirty(): (boolean | null) {
         // Overrriden in JSObject
         const parentObj:JSObject = this.getJSParent(null);
-        // @ts-ignore
         return parentObj ? parentObj.setDirty() : null;
     }
 
@@ -1090,9 +1087,8 @@ export class JSObject {
      *
      * @return true if it's marked as dirty
      */
-    isDirty(): boolean {
+    isDirty(): (boolean | null) {
         const parentObj = this.getJSParent(null);
-        // @ts-ignore
         return parentObj ? parentObj.isDirty() : null;
         // Overridden in JSObject
     }
@@ -1103,7 +1099,7 @@ export class JSObject {
      *
      * @return true if it's marked as new or dirty
      */
-    isModified(): boolean {
+    isModified(): (boolean | null) {
         // implemented by subclass
         return this.isDirty();
     }
@@ -1267,9 +1263,8 @@ export class JSObject {
      * @param replacer see JSON.stringify's replacer parameter
      * @param space see JSON.stringify' space parameter. Default to indent=2
      */
-    toString(replacer?:string, space?:string): string {
+    toString(replacer?:any, space?:(string | number)): string {
         const prefix = `[${this.getClassname()}]:`;
-        // @ts-ignore
         return prefix + JSON.stringify(this, replacer, space);
     }
 
@@ -1303,8 +1298,8 @@ export class JSObject {
    * @returns
    */
   static IsSerializedJSObject(jsonObj:object): boolean {
-    // @ts-ignore
-    return ((DataUtil.NotNull(jsonObj[PROP_SERIAL_TYPE])) && (DataUtil.NotNull(jsonObj[PROP_MAIN_DATA])));
+    const obj = jsonObj as Record<string, unknown>;
+    return ((DataUtil.NotNull(obj[PROP_SERIAL_TYPE])) && (DataUtil.NotNull(obj[PROP_MAIN_DATA])));
   }
 
   /**
@@ -1327,13 +1322,10 @@ export class JSObject {
     if (jstype == null) {
         return jsobject;
     }
-    const result = {};
+    const result: Record<string, unknown> = {};
 
-    // @ts-ignore
     result[PROP_MAIN_DATA] = JSObject.GetData(jsobject);
-    // @ts-ignore
     result[PROP_AUX_DATA] = JSObject.GetAuxData(jsobject);
-    // @ts-ignore
     result[PROP_SERIAL_TYPE] = jstype;
 
     return result;
@@ -1483,7 +1475,7 @@ export class JSObject {
      *
      * @see #Wrap
      */
-    static Unwrap(obj:(JSObject|object)): JSData {
+    static Unwrap(obj:any): JSData {
         if (obj == null) {
             return obj;
         }
@@ -1524,23 +1516,20 @@ export class JSObject {
             throw new JSError('JS_WRAP', errmsg);
         }
 
-        // WARNING: this works in Javascript as Class object can be used by "new" operator,
-        // but TypeScript is treating Class as a Function
-        // @ts-ignore
-        let item;
+        let item: any;
 
         if (ClassObject == null) {
             // lookup global registration. Should find it if class register itself
             // sometime before this call via JSObject.RegisterSelf()
-            ClassObject = MetaUtil.GetClassByType(typeID);
-            if (ClassObject == null) {
+            const registered = MetaUtil.GetClassByType(typeID);
+            if (registered == null) {
                 const errmsg = `TypeID ${typeID} not registered as a class!`;
                 _logger.trace(_m, errmsg);
                 throw new JSError('JS_WRAP', errmsg);
             }
+            ClassObject = registered;
         }
 
-        // @ts-ignore
          item = new ClassObject();
 
 
@@ -1557,7 +1546,6 @@ export class JSObject {
         // JSObject.toJSON(). This is a HACK as we
         // should rely on the "type" property at the top level.
         if (jsonData && jsonData.hasOwnProperty(PROP_MAIN_DATA)) {
-            // @ts-ignore
             item.setData(jsonData[PROP_MAIN_DATA]);
         } else {
             item.setData(jsonData);
@@ -1601,7 +1589,6 @@ export class JSObject {
     static WrapArray(jsonArray:JSData[], clsType:JSClass = JSObject): JSObject[] {
         let result: JSObject[];
         if (jsonArray) {
-            // @ts-ignore
             result = jsonArray.map((json:JSData) => {
                 const jsobj = JSObject.Wrap(json, clsType);
                 return jsobj;
@@ -1792,7 +1779,7 @@ export class JSObject {
      * @param defaultVal
      * @return
      */
-    static GetId(psobject:JSObject, defaultVal:any = null): string {
+    static GetId(psobject:JSObject, defaultVal:any = null): (string | undefined) {
         return psobject ? JSObject.Unwrap(psobject)[PROP_ID] : defaultVal;
     }
 
@@ -1805,13 +1792,12 @@ export class JSObject {
      * @param defaultVal value to return if given data is not
      * a valid JSObject or its json, or missing "type" field.
      */
-    static GetType(obj:(JSObject|JSData), defaultVal:any = null): string {
+    static GetType(obj:(JSObject|JSData), defaultVal:any = null): (JSType | null) {
         if ((obj == null) || (typeof (obj) !== 'object')) {
             return defaultVal;
         }
 
         if (obj instanceof JSObject) {
-            // @ts-ignore
             return obj.getType();
         }
 
@@ -1868,10 +1854,9 @@ export class JSObject {
    * @param timeVal optional time value to set or null to use current time
    * @return
    */
-  static SetUpdatedTS(jsonObj:JSData, timeVal:any = null): (number | null) {
+  static SetUpdatedTS(jsonObj:JSData, timeVal:any = null): (number | undefined) {
     let prevValue = jsonObj[PROP_UPDATED_DATE];
     jsonObj[PROP_UPDATED_DATE] = (timeVal || Date.now());
-    // @ts-ignore
     return prevValue;
   }
 
@@ -1939,10 +1924,8 @@ export class JSObject {
         jsonObj = JSObject.Unwrap(jsonObj);
         value = JSObject.Unwrap(value);
         const hasProp = jsonObj.hasOwnProperty(field);
-        // @ts-ignore
         const prev = hasProp ? jsonObj[field] : null;
         if (!hasProp || (prev !== value)) {
-            // @ts-ignore
             jsonObj[field] = value;
             return prev;
         }
@@ -1970,7 +1953,7 @@ export class JSObject {
      * @param override true to override existing value
      * @return replaced label/values
      */
-    static ImportObjectFields(jsonObj:JSData, props:{}, override:boolean = false): {} {
+    static ImportObjectFields(jsonObj:JSData, props:{}, override:boolean = false): any {
         props = JSObject.Unwrap(props); // just in case it's from another JSObject
         return JSONUtil.ImportObjectFields(jsonObj, props, override);
     }
@@ -1994,7 +1977,6 @@ export class JSObject {
             return defaultVal;
         }
         jsonObj = JSObject.Unwrap(jsonObj);
-        // @ts-ignore
         const val = jsonObj[field];
         return DataUtil.NotNull(val) ? val : defaultVal;
     }
@@ -2080,7 +2062,6 @@ export class JSObject {
         if (!hasProp || (existOK === true)) {
             return hasProp;
         }
-        // @ts-ignore check actual value
         return DataUtil.NotNull(jsonObj[field]);
     }
 
@@ -2098,7 +2079,6 @@ export class JSObject {
     static ClearObjectField(jsonObj:JSData, field:string) {
         jsonObj = JSObject.Unwrap(jsonObj);
         if (jsonObj.hasOwnProperty(field)) {
-            // @ts-ignore
             delete jsonObj[field];
             return true;
         }
@@ -2117,17 +2097,15 @@ export class JSObject {
      * @see ~GetObjectField
      * @see ~SetJSObjectField
      */
-    static SetBase64Field(jsonObj:JSData, field:string, value:any) {
+    static SetBase64Field(jsonObj:JSData, field:string, value:any): any {
         if (!DataUtil.AssertNotNull(field, _CLSNAME_, 'SetBase64Field', 'Field name cannot be null.')) {
             return null;
         }
         jsonObj = JSObject.Unwrap(jsonObj);
         value = JSObject.Unwrap(value);
         const b64val = Base64.encode(value);
-        // @ts-ignore
         const prev = jsonObj.hasOwnProperty(field) ? jsonObj[field] : null;
         if (prev !== b64val) {
-            // @ts-ignore
             jsonObj[field] = b64val;
             return prev;
         }
@@ -2151,8 +2129,8 @@ export class JSObject {
             return defaultVal;
         }
         jsonObj = JSObject.Unwrap(jsonObj);
-        // @ts-ignore
-        const b64val = jsonObj[field];
+        // Stored by SetBase64Field, so a string; anything else is data corruption.
+        const b64val = jsonObj[field] as string;
         const val = (DataUtil.NotNull(b64val)) ? Base64.decode(b64val) : null;
         return DataUtil.NotNull(val) ? val : defaultVal;
     }
@@ -2176,10 +2154,8 @@ export class JSObject {
         jsonObj = JSObject.Unwrap(jsonObj);
         value = JSObject.Unwrap(value);
         const encval = JSONUtil.EncryptJSON(value);
-        // @ts-ignore
         const prev = jsonObj.hasOwnProperty(field) ? jsonObj[field] : null;
         if (prev !== encval) {
-            // @ts-ignore
             jsonObj[field] = encval;
             return prev;
         }
@@ -2205,8 +2181,8 @@ export class JSObject {
         }
         jsonObj = JSObject.Unwrap(jsonObj);
 
-        // @ts-ignore
-        const encval = jsonObj[field];
+        // Stored by SetEncryptedField, so a string; anything else is data corruption.
+        const encval = jsonObj[field] as string;
         const val = (DataUtil.NotNull(encval)) ? JSONUtil.DecryptJSON(encval) : null;
         return DataUtil.NotNull(val) ? val : defaultVal;
     } // GetEncryptedField
