@@ -45,11 +45,16 @@ export interface JSData {
  * way.
  */
 export class JSObject {
-    [PROP_MAIN_DATA]: JSData = {};
-    [PROP_AUX_DATA]: (JSData | undefined) = undefined;
-    [PROP_JSCLASS]: (JSClass | undefined) = undefined;
-    [PROP_TRANSIENT_PARENT]: (JSObject | undefined) = undefined;
-    [PROP_SERIAL_TYPE]: (string | undefined) = undefined;
+    /*
+     * The wrapped state is protected: callers go through getData()/set()/
+     * get() and friends, subclasses and this class's own statics may reach
+     * it directly.
+     */
+    protected [PROP_MAIN_DATA]: JSData = {};
+    protected [PROP_AUX_DATA]: (JSData | undefined) = undefined;
+    protected [PROP_JSCLASS]: (JSClass | undefined) = undefined;
+    protected [PROP_TRANSIENT_PARENT]: (JSObject | undefined) = undefined;
+    protected [PROP_SERIAL_TYPE]: (string | undefined) = undefined;
 
     public static PROP_ID = PROP_ID;
     public static PROP_TYPE = PROP_TYPE;
@@ -142,7 +147,7 @@ export class JSObject {
      *
      * @param {class} classObj
      */
-    _setClass(classObj:JSClass): void {
+    protected _setClass(classObj:JSClass): void {
         this[PROP_JSCLASS] = classObj;
     }
 
@@ -176,11 +181,11 @@ export class JSObject {
      * @param {string} idVal
      * @returns {string | null}
      */
-    _setId(idVal:string): boolean {
+    protected _setId(idVal:string): boolean {
         return this._classStatics().SetId(this.getData(true), idVal);
     }
 
-    _clearId(): any {
+    protected _clearId(): any {
         const data = this.getData(false);
         return data ? this._classStatics().ClearId(data) : null;
     }
@@ -202,7 +207,7 @@ export class JSObject {
      * @param {JSType} typeID optional. If not specified then will try to determine
      * @returns {boolean} true if setting type ID successfully
      */
-    _setTypeID(typeID: (JSType | null)): boolean {
+    protected _setTypeID(typeID: (JSType | null)): boolean {
         const _m = '_setTypeID';
         if (typeID == null) {
             typeID = MetaUtil.DetermineClassType(this.getClass());
@@ -1172,7 +1177,7 @@ export class JSObject {
      *
      * @returns
      */
-    _clearCreatedTS() {
+    protected _clearCreatedTS() {
         const retVal = JSObject.ClearCreatedTS(this.getData());
         if (this.isDirty() === false) {
             this.setDirty();
@@ -1207,7 +1212,7 @@ export class JSObject {
         return data ? JSObject.GetUpdatedTS(data, defaultVal) : defaultVal;
     }
 
-    _clearUpdatedTS() {
+    protected _clearUpdatedTS() {
         const retVal = JSObject.ClearUpdatedTS(this.getData());
         if (this.isDirty() === false) {
             this.setDirty();

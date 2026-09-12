@@ -11,11 +11,11 @@ const _instances = new Map<string, Logger>();
  */
 export class Logger {
     /** class name associated with Logger instance */
-    cn: string;
-    logStream: LogStream;
-    tableStream: LogStream;
-    errorStream: LogStream;
-    traceStream: LogStream;
+    private readonly cn: string;
+    private logStream: LogStream;
+    private tableStream: LogStream;
+    private errorStream: LogStream;
+    private traceStream: LogStream;
 
     /**
      *

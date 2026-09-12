@@ -19,9 +19,10 @@ const PROP_ARGS = 'args';
  * `equals`, never by message text.
  */
 export class JSError extends Error {
-    [PROP_ECODE]: string;
-    [PROP_MSG]: string;
-    [PROP_ARGS]: string;
+    /* The code is the identity; read it through getCode()/CODE. */
+    private [PROP_ECODE]: string;
+    private [PROP_MSG]: string;
+    private [PROP_ARGS]: string;
 
     /**
      *
