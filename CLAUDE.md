@@ -23,7 +23,9 @@ Tests are run locally using Jest with ts-jest:
 npm test
 ```
 
-Test files live alongside source as `.test.js` files in `src/model/`.
+Test files live alongside source as `.test.ts` files (model, util, system),
+and `src/__tests__/ModuleSurfaces.test.ts` pins each subsystem's exported
+surface. Tests import from the public barrel, the way a consumer does.
 
 ## Architecture
 
@@ -32,7 +34,10 @@ Test files live alongside source as `.test.js` files in `src/model/`.
 - **JSObject** - Base class wrapping a `JSData` (plain JSON object) with typed property accessors (`get`, `set`, `getString`, `getNumber`, etc.), parent/child relationships, aux data, and JSON serialization/deserialization. Every subclass implements `static GetClass()` and calls `RegisterSelf()` at module level.
 - **JSCollection** - Extends JSObject to hold an array of JSObjects under a `list` property. Provides `getList()`, `getWrappedList()`, `forEach()`, sorting, and filtering.
 - **JSError** - Error representation with code, message, and formatted arguments. Instances are compared by error code.
-- **JSTypes** - Type definitions: `JSType`, `JSONValue`, `JSONObject`, `JSONArray`, `JSClass`, `JSProperties`.
+
+### Types (`src/types/`)
+
+- **JSTypes** - Type definitions: `JSType`, `JSONValue`, `JSONObject`, `JSONArray`, `JSClass`, `JSProperties`. The bottom layer: both `util/` and `model/` import from it.
 
 ### Class Registration Pattern
 
@@ -41,7 +46,7 @@ Every JSObject subclass must:
 2. Define `static GetClass(): JSClass` returning the class constructor
 3. Call `ClassName.RegisterSelf()` at module top level
 
-Registration uses `MetaUtil.RegisterType()` which stores class constructors in `global._REGISTRY_`. This enables dynamic instantiation from serialized JSON via the `_c_` (class) property.
+Registration uses `MetaUtil.RegisterType()` which stores class constructors in a registry deliberately kept on `global` (shared across duplicate package copies). This enables dynamic instantiation from serialized JSON via the type (`_t_`) property.
 
 ### Utilities (`src/util/`)
 
@@ -56,20 +61,29 @@ Registration uses `MetaUtil.RegisterType()` which stores class constructors in `
 
 - **Logger** - Singleton logger per class name via `Logger.Get(className)`. Methods: `log`, `warn`, `error`, `trace`, `debug`.
 
+### Subsystem surfaces
+
+Each directory (`types/`, `system/`, `util/`, `model/`) carries a documented
+contract in its own `index.ts`: what it is for, how to use it, and what a
+caller must not assume. `src/__tests__/ModuleSurfaces.test.ts` pins those
+surfaces so the contract and the comment cannot drift apart.
+
 ### Entry Point (`src/index.ts`)
 
-Re-exports all public classes, types, constants, and utilities. Consumers import everything from `@tcl/jsobject`:
+A thin re-export over the subsystem barrels. Consumers import everything from `@tcl/jsobject`:
 ```ts
 import { JSObject, JSError, DataUtil, Logger } from '@tcl/jsobject';
 ```
+The package.json `exports` field locks the boundary: deep imports into
+`dist/` fail at resolve time.
 
 ## Code Style
 
 - TypeScript with `strict: true`, ES6 target, CommonJS modules
 - Logger convention: each file declares `const _CLSNAME_ = 'ClassName'` and `const _logger = Logger.Get(_CLSNAME_)`
-- `@ts-nocheck` / `@ts-ignore` used in some files for loose typing patterns inherited from JavaScript origins
+- No type suppressions: `@ts-nocheck` / `@ts-ignore` are gone and stay gone; `any` only at genuine JSON boundaries
 - Classes use PascalCase, constants use UPPER_SNAKE_CASE
-- Private members prefixed with `_`
+- Private members prefixed with `_`; the wrapped state and `_set*` identity mutators are `protected` -- identity-assigning construction goes through a class-side static (e.g. `JSObject.CreateNew`, or a subclass factory)
 
 ## Build Output
 
