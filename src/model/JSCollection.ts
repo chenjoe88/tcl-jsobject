@@ -536,13 +536,6 @@ export class JSCollection extends JSObject {
   }
 
   /**
-   * Wrap JSON data that represents XMList
-   */
-  // static Wrap(jsonRec, clsType=XMList) {
-  //     return XMList.WrapXMObject(jsonRec, clsType);
-  // }
-
-  /**
    * Take an array of JSON objects and wrap with
    * the given wrapper function
    *
