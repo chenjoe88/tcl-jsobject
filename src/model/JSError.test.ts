@@ -1,7 +1,7 @@
-import JSError from "./JSError";
+import { JSError } from '../index';
 
 
-const code= {
+const code = {
     E_UNKNOWN: "99",
     E_FILE_NOT_FOUND: "100",
     E_MISSING_PROPERTY: "101"
@@ -14,9 +14,9 @@ const msg = {
 };
 
 describe('JSError', () => {
-    let /** @type {JSError} */ err0;
-    let /** @type {JSError} */ err1;
-    let /** @type {JSError} */ err2;
+    let err0: JSError;
+    let err1: JSError;
+    let err2: JSError;
 
     beforeEach(() => {
         err0 = new JSError(code.E_UNKNOWN);
@@ -68,9 +68,9 @@ describe('JSError is a real Error', () => {
         const err = new JSError(code.E_UNKNOWN, msg.E_UNKNOWN);
 
         expect(typeof err.stack).toBe('string');
-        expect(err.stack.length).toBeGreaterThan(0);
+        expect(err.stack!.length).toBeGreaterThan(0);
         // The constructor itself should not be the first frame.
-        expect(err.stack.split(String.fromCharCode(10))[1] || '').not.toMatch(/new JSError/);
+        expect(err.stack!.split(String.fromCharCode(10))[1] || '').not.toMatch(/new JSError/);
     });
 
     test('names itself, so a log line says what it is', () => {
@@ -96,7 +96,7 @@ describe('JSError is a real Error', () => {
     });
 
     test('keeps its code through a catch', () => {
-        let caught = null;
+        let caught: any = null;
         try {
             throw new JSError(code.E_MISSING_PROPERTY, 'gone');
         } catch (err) {

@@ -21,17 +21,17 @@ const PROP_ARGS = 'args';
 export class JSError extends Error {
     /* The code is the identity; read it through getCode()/CODE. */
     private [PROP_ECODE]: string;
-    private [PROP_MSG]: string;
+    private [PROP_MSG]: (string | null | undefined);
     private [PROP_ARGS]: string;
 
     /**
      *
      * @param code
-     * @param msg
+     * @param msg optional prose for a human; null stays null (see below)
      * @param  args
      */
-    constructor(code:string, msg:string, ...args:any) {
-        super(msg);
+    constructor(code:string, msg?:(string | null), ...args:any) {
+        super(msg as string);
 
         this.name = 'JSError';
         this[PROP_ECODE] = code;
@@ -72,7 +72,7 @@ export class JSError extends Error {
      *
      * @returns
      */
-    getMessage(): string {
+    getMessage(): (string | null | undefined) {
         return this[PROP_MSG];
     }
 
@@ -109,7 +109,7 @@ export class JSError extends Error {
      * @param {*} errorObject
      * @returns {boolean}
      */
-    equals(errorObject:object): boolean {
+    equals(errorObject:any): boolean {
         if (this === errorObject) {
             return true;
         }

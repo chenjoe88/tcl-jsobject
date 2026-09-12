@@ -1,5 +1,4 @@
-import MetaUtil from '../util/MetaUtil';
-import JSObject from './JSObject';
+import { JSObject, JSData, MetaUtil } from '../index';
 
 
 class Sub1 extends JSObject {
@@ -13,17 +12,24 @@ class Sub1 extends JSObject {
   static GetTypeID() {
     return 's1';
   }
-};
+
+  /** The sanctioned way in: a class-side static may assign identity. */
+  static NewWithId(id: string): Sub1 {
+    const obj = new Sub1();
+    obj._setId(id);
+    return obj;
+  }
+}
 MetaUtil.RegisterType(Sub1);
 
 describe('JSObject', () => {
-  let /** @type {JSObject} */ jsobject;
+  let jsobject: JSObject;
 
-  let props;
+  let props: Record<string, any>;
   let plabel1;
-  let pvalue1;
-  let pvalue2;
-  let objectId;
+  let pvalue1: number;
+  let pvalue2: string;
+  let objectId: string;
 
   beforeEach(() => {
     jsobject = new JSObject();
@@ -44,14 +50,14 @@ describe('JSObject', () => {
     expect(jsobject.getClass()).toEqual(JSObject.GetClass());
     expect(jsobject.getClass()).toEqual(JSObject);
 
-    jsobject._setId(objectId);
-    expect(jsobject.getId()).toEqual(objectId);
+    // Identity is assigned through the class-side factory, not a back door
+    const withId = JSObject.CreateNew(objectId, null as any);
+    expect(withId.getId()).toEqual(objectId);
 
   });
 
   it('Type Instantiation', () => {
-    const subobj = new Sub1();
-    subobj._setId(objectId);
+    const subobj = Sub1.NewWithId(objectId);
 
     expect(subobj.getClass()).toEqual(Sub1);
     expect(subobj.getClassname()).toEqual(Sub1.name);
@@ -82,7 +88,7 @@ describe('JSObject', () => {
       f1: true,
       f2: false
     };
-    jsobject.setJSParent(parent);
+    jsobject.setJSParent(parent as any);
     expect(jsobject.getJSParent(null)).toEqual(parent);
   });
 
@@ -136,14 +142,14 @@ describe('JSObject', () => {
 
 
     const fields = [f1, f2, f3, 'f0'];
-    const values = jsobject.getMultiple(fields, 'bad');
+    const values = jsobject.getMultiple(fields, 'bad')!;
     expect(values.length).toEqual(fields.length);
     expect(values[0]).toEqual(v1);
     expect(values[1]).toEqual(v2);
     expect(values[2]).toEqual(v3);
     expect(values[3]).toEqual('bad');
 
-    const fv = {
+    const fv: Record<string, any> = {
       [f1]: v1,
       [f2]: v2,
       [f3]: v3,
@@ -239,7 +245,7 @@ describe('JSObject', () => {
   it('Aux data - addAuxData merges', () => {
     jsobject.setAuxData({ a: 1 });
     jsobject.addAuxData({ b: 2 });
-    const aux = jsobject.getAuxData();
+    const aux = jsobject.getAuxData(true);
     expect(aux.a).toEqual(1);
     expect(aux.b).toEqual(2);
   });
@@ -255,11 +261,10 @@ describe('JSObject', () => {
   });
 
   it('Aux data - getWrappedAuxData', () => {
-    const sub = new Sub1();
-    sub._setId('aux-id');
+    const sub = Sub1.NewWithId('aux-id');
     const subData = sub.getData(false);
     jsobject.setAuxData(subData);
-    const wrapped = jsobject.getWrappedAuxData();
+    const wrapped = jsobject.getWrappedAuxData()!;
     expect(wrapped).toBeTruthy();
     expect(wrapped.getId()).toEqual('aux-id');
     expect(wrapped.getClass()).toEqual(Sub1);
@@ -276,7 +281,7 @@ describe('JSObject', () => {
 
   it('Data management - cloneData', () => {
     jsobject.set('original', 'value');
-    const cloned = jsobject.cloneData();
+    const cloned = jsobject.cloneData()!;
     expect(cloned.original).toEqual('value');
     // Mutating clone does not affect original
     cloned.original = 'changed';
@@ -284,9 +289,8 @@ describe('JSObject', () => {
   });
 
   it('Data management - cloneInstance', () => {
-    jsobject._setId('clone-src');
     jsobject.set('field1', 'abc');
-    const cloned = jsobject.cloneInstance();
+    const cloned = jsobject.cloneInstance() as JSObject;
     expect(cloned).toBeInstanceOf(JSObject);
     // Cloned instance has its own data copy
     expect(cloned.get('field1')).toEqual('abc');
@@ -300,18 +304,18 @@ describe('JSObject', () => {
     jsobject.set('c', 3);
 
     // No filters returns raw data
-    const all = jsobject.toJSON();
+    const all = jsobject.toJSON() as any;
     expect(all.a).toEqual(1);
     expect(all.b).toEqual(2);
 
     // Include only
-    const included = jsobject.toJSON(['a', 'c']);
+    const included = jsobject.toJSON(['a', 'c']) as any;
     expect(included.a).toEqual(1);
     expect(included.c).toEqual(3);
     expect(included.b).toBeUndefined();
 
     // Exclude
-    const excluded = jsobject.toJSON(null, ['b']);
+    const excluded = jsobject.toJSON(undefined, ['b']) as any;
     expect(excluded.a).toEqual(1);
     expect(excluded.b).toBeUndefined();
     expect(excluded.c).toEqual(3);
@@ -326,12 +330,11 @@ describe('JSObject', () => {
   });
 
   it('Serialization - Serialize / DeSerialize round-trip', () => {
-    const sub = new Sub1();
-    sub._setId('ser-1');
+    const sub = Sub1.NewWithId('ser-1');
     sub.set('payload', 'data');
     sub.setAuxData({ meta: 'info' });
 
-    const serialized = JSObject.Serialize(sub);
+    const serialized = JSObject.Serialize(sub) as any;
     expect(serialized.data).toBeDefined();
     expect(serialized.aux).toBeDefined();
     expect(serialized.serial).toEqual(Sub1.GetTypeID());
@@ -408,27 +411,27 @@ describe('JSObject', () => {
     expect(created.get('color')).toEqual('green');
 
     // Without jsonData, ID is retained
-    const idOnly = JSObject.CreateNew('id-only', null);
+    const idOnly = JSObject.CreateNew('id-only', null as any);
     expect(idOnly.getId()).toEqual('id-only');
   });
 
   it('Static wrapping - CloneData', () => {
     const src = { a: 1, b: { c: 2 } };
-    const cloned = JSObject.CloneData(src);
+    const cloned = JSObject.CloneData(src) as any;
     expect(cloned).toEqual(src);
     cloned.b.c = 99;
     expect(src.b.c).toEqual(2);
   });
 
   it('Static field operations - SetId / GetId', () => {
-    const json = {};
+    const json: JSData = {};
     JSObject.SetId(json, 'UPPER');
     expect(json._id_).toEqual('upper'); // lowercased
-    expect(JSObject.GetId(json)).toEqual('upper');
+    expect(JSObject.GetId(json as any)).toEqual('upper');
   });
 
   it('Static field operations - SetName / GetName', () => {
-    const json = {};
+    const json: JSData = {};
     JSObject.SetName(json, 'MyName');
     expect(JSObject.GetName(json)).toEqual('MyName');
     expect(JSObject.GetName({}, 'fallback')).toEqual('fallback');
@@ -446,7 +449,7 @@ describe('JSObject', () => {
   });
 
   it('Static field operations - ImportObjectFields', () => {
-    const target = { a: 1, b: 2 };
+    const target: any = { a: 1, b: 2 };
     // ImportObjectFields always copies all props from source into target
     JSObject.ImportObjectFields(target, { b: 99, c: 3 });
     expect(target.a).toEqual(1);
@@ -461,12 +464,12 @@ describe('JSObject', () => {
 
   it('Static field operations - GetObjectFields with include/exclude', () => {
     const json = { a: 1, b: 2, c: 3, d: 4 };
-    const subset = JSObject.GetObjectFields(json, ['a', 'c'], null);
+    const subset = JSObject.GetObjectFields(json, ['a', 'c'], null) as any;
     expect(subset.a).toEqual(1);
     expect(subset.c).toEqual(3);
     expect(subset.b).toBeUndefined();
 
-    const excluded = JSObject.GetObjectFields(json, null, ['d']);
+    const excluded = JSObject.GetObjectFields(json, null, ['d']) as any;
     expect(excluded.a).toEqual(1);
     expect(excluded.d).toBeUndefined();
   });
@@ -484,7 +487,7 @@ describe('JSObject', () => {
     expect(jsobject.get('k1')).toEqual('updated');
 
     // getObjectFields - extract subset
-    const subset = jsobject.getObjectFields(['k1', 'k3'], null);
+    const subset = jsobject.getObjectFields(['k1', 'k3'], null as any) as any;
     expect(subset.k1).toEqual('updated');
     expect(subset.k3).toEqual('v3');
     expect(subset.k2).toBeUndefined();

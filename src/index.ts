@@ -1,18 +1,23 @@
+/*
+ * @tcl/jsobject -- a typed facade over raw JSON.
+ *
+ * The package entry stays thin: each subsystem's own index.ts carries its
+ * contract (what it is for, how to use it, what not to assume). Start there.
+ */
+
 // Model
-export { default as JSObject, JSData, PROP_MAIN_DATA, PROP_JSCLASS, PROP_ID, PROP_TYPE,
-         PROP_PARENT, PROP_TRANSIENT_PARENT, PROP_NAME, PROP_AUX_DATA, PROP_SERIAL_TYPE,
-         PROP_CREATED_DATE, PROP_UPDATED_DATE, PROP_EXPIRATION_DATE } from "./model/JSObject";
-export { default as JSCollection } from "./model/JSCollection";
-export { default as JSError } from "./model/JSError";
+export {
+    JSObject, JSCollection, JSError, JSData,
+    PROP_MAIN_DATA, PROP_JSCLASS, PROP_ID, PROP_TYPE, PROP_PARENT,
+    PROP_TRANSIENT_PARENT, PROP_NAME, PROP_AUX_DATA, PROP_SERIAL_TYPE,
+    PROP_CREATED_DATE, PROP_UPDATED_DATE, PROP_EXPIRATION_DATE,
+} from "./model";
+
+// Types
 export { JSType, JSONValue, JSONObject, JSONArray, JSClass, JSProperties } from "./types";
 
 // Utilities
-export { default as DataUtil } from "./util/DataUtil";
-export { default as JSONUtil } from "./util/JSONUtil";
-export { default as Base64 } from "./util/Base64";
-export { default as MetaUtil } from "./util/MetaUtil";
-export { default as StringUtil } from "./util/StringUtil";
-export { default as Util } from "./util/Util";
+export { DataUtil, JSONUtil, Base64, MetaUtil, StringUtil, Util } from "./util";
 
 // System
-export { default as Logger } from "./system/Logger";
+export { Logger } from "./system";

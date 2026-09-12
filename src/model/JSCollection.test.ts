@@ -1,6 +1,4 @@
-import MetaUtil from '../util/MetaUtil';
-import JSObject from './JSObject';
-import JSCollection from './JSCollection';
+import { JSObject, JSCollection, MetaUtil } from '../index';
 
 
 class Sub1 extends JSObject {
@@ -13,11 +11,18 @@ class Sub1 extends JSObject {
   static GetTypeID() {
     return 's1';
   }
+
+  /** The sanctioned way in: a class-side static may assign identity. */
+  static NewWithId(id: string): Sub1 {
+    const obj = new Sub1();
+    obj._setId(id);
+    return obj;
+  }
 }
 MetaUtil.RegisterType(Sub1);
 
 describe('JSCollection', () => {
-  let /** @type {JSCollection} */ col;
+  let col: JSCollection;
 
   beforeEach(() => {
     col = new JSCollection();
@@ -33,8 +38,8 @@ describe('JSCollection', () => {
 
   it('Constructor with initial objects array populates list', () => {
     const items = [{ name: 'a' }, { name: 'b' }];
-    const col2 = new JSCollection(items);
-    const list = col2.getList();
+    const col2 = new JSCollection(items as any);
+    const list = col2.getList() as any[];
     expect(list.length).toBe(2);
     expect(list[0].name).toBe('a');
     expect(list[1].name).toBe('b');
@@ -45,13 +50,13 @@ describe('JSCollection', () => {
   it('setList replaces list, getList retrieves it', () => {
     const items = [{ x: 1 }, { x: 2 }];
     col.setList(items);
-    const list = col.getList();
+    const list = col.getList()!;
     expect(list).toBe(items);
     expect(list.length).toBe(2);
   });
 
   it('getList(true) creates empty list if none exists', () => {
-    const list = col.getList(true);
+    const list = col.getList(true)!;
     expect(Array.isArray(list)).toBe(true);
     expect(list.length).toBe(0);
   });
@@ -121,8 +126,7 @@ describe('JSCollection', () => {
   });
 
   it('addItem unwraps JSObject instances', () => {
-    const sub = new Sub1();
-    sub._setId('wrapped-add');
+    const sub = Sub1.NewWithId('wrapped-add');
     col.addItem(sub);
     const rawItem = col.getItemAt(0);
     // stored as raw JSON, not as JSObject
@@ -151,7 +155,7 @@ describe('JSCollection', () => {
   });
 
   it('addXItems returns 0 for null input', () => {
-    expect(col.addXItems(null)).toBe(0);
+    expect(col.addXItems(null as any)).toBe(0);
   });
 
   it('addXObjects is alias for addXItems', () => {
@@ -165,7 +169,7 @@ describe('JSCollection', () => {
   it('forEach iterates over wrapped list items', () => {
     col.addItem({ _t_: 's1', _id_: 'f1' });
     col.addItem({ _t_: 's1', _id_: 'f2' });
-    const ids = [];
+    const ids: any[] = [];
     col.forEach((item) => {
       expect(item).toBeInstanceOf(Sub1);
       ids.push(item.getId());
@@ -183,7 +187,7 @@ describe('JSCollection', () => {
   it('getWrappedList returns array of JSObject-wrapped items', () => {
     col.addItem({ _t_: 's1', _id_: 'w1', color: 'red' });
     col.addItem({ _t_: 's1', _id_: 'w2', color: 'blue' });
-    const wrapped = col.getWrappedList();
+    const wrapped = col.getWrappedList()!;
     expect(wrapped.length).toBe(2);
     expect(wrapped[0]).toBeInstanceOf(Sub1);
     expect(wrapped[0].getId()).toBe('w1');
@@ -198,15 +202,15 @@ describe('JSCollection', () => {
 
   it('getWrappedList with create=true returns empty array', () => {
     const col2 = new JSCollection();
-    const result = col2.getWrappedList(true);
+    const result = col2.getWrappedList(true)!;
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBe(0);
   });
 
   it('getXItems and getXObjects are aliases for getWrappedList', () => {
     col.addItem({ _t_: 's1', _id_: 'a1' });
-    const items = col.getXItems();
-    const objects = col.getXObjects();
+    const items = col.getXItems()!;
+    const objects = col.getXObjects()!;
     expect(items.length).toBe(1);
     expect(objects.length).toBe(1);
     expect(items[0]).toBeInstanceOf(Sub1);
@@ -272,8 +276,7 @@ describe('JSCollection', () => {
   });
 
   it('includesXMObject checks by data reference', () => {
-    const sub = new Sub1();
-    sub._setId('inc-1');
+    const sub = Sub1.NewWithId('inc-1');
     const data = sub.getData();
     col.addItem(data);
     expect(col.includesXMObject(sub)).toBe(true);
@@ -350,7 +353,7 @@ describe('JSCollection', () => {
     col.addItem({ n: 1 });
     col.addItem({ n: 2 });
     col.addItem({ n: 3 });
-    const removed = col.splice(0, 1);
+    const removed = col.splice(0, 1) as any[];
     expect(removed.length).toBe(1);
     expect(removed[0].n).toBe(1);
     expect(col.getItemCount()).toBe(2);
@@ -366,7 +369,7 @@ describe('JSCollection', () => {
   });
 
   it('Static GetList creates list with create=true', () => {
-    const data = {};
+    const data: any = {};
     const list = JSCollection.GetList(data, true);
     expect(Array.isArray(list)).toBe(true);
     expect(list.length).toBe(0);
@@ -442,7 +445,7 @@ describe('JSCollection', () => {
 
   it('Static GetItemsByMatcher filters with custom function', () => {
     const list = [{ val: 1 }, { val: 5 }, { val: 10 }, { val: 15 }];
-    const result = JSCollection.GetItemsByMatcher(list, (item) => item.val > 5);
+    const result = JSCollection.GetItemsByMatcher(list, (item) => item.val > 5)!;
     expect(result.length).toBe(2);
     expect(result[0].val).toBe(10);
     expect(result[1].val).toBe(15);
@@ -450,7 +453,7 @@ describe('JSCollection', () => {
 
   it('Static GetItemsByMatcher respects max', () => {
     const list = [{ val: 10 }, { val: 20 }, { val: 30 }];
-    const result = JSCollection.GetItemsByMatcher(list, (item) => item.val >= 10, 2);
+    const result = JSCollection.GetItemsByMatcher(list, (item) => item.val >= 10, 2)!;
     expect(result.length).toBe(2);
   });
 
@@ -481,7 +484,7 @@ describe('JSCollection', () => {
 
   it('Static ArrayToWrappedArray accepts custom wrapper function', () => {
     const items = [{ a: 1 }, { a: 2 }];
-    const wrapped = JSCollection.ArrayToWrappedArray(items, (item) => ({ ...item, wrapped: true }));
+    const wrapped = JSCollection.ArrayToWrappedArray(items, ((item: any) => ({ ...item, wrapped: true })) as any) as any[];
     expect(wrapped[0].wrapped).toBe(true);
     expect(wrapped[0].a).toBe(1);
     expect(wrapped[1].wrapped).toBe(true);
